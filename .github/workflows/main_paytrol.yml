@@ -62,4 +62,4 @@ jobs:
           app-name: 'Paytrol'
           slot-name: 'Production'
           package: .
-          
+          startup-command: npm start
