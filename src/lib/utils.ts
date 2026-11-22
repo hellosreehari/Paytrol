@@ -70,6 +70,27 @@ export function formatRelativeTime(dateString: string): string {
  * Compress image file to max size (in bytes)
  */
 export async function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<Blob> {
+  const isHeic =
+    /image\/hei[cf]/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
+  let imageBlob: Blob = file;
+
+  if (isHeic) {
+    try {
+      const { default: heic2any } = await import('heic2any');
+      const converted = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9,
+      });
+      const jpeg = Array.isArray(converted) ? converted[0] : converted;
+      if (!jpeg) throw new Error('HEIC conversion returned no image.');
+      imageBlob = jpeg;
+    } catch (error) {
+      console.error('HEIC image conversion failed:', error);
+      throw new Error('Could not convert this HEIC photo. Please try another photo.');
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -109,8 +130,8 @@ export async function compressImage(file: File, maxSizeBytes: number = 1024 * 10
     };
 
     img.onerror = () =>
-      reject(new Error('Could not read this photo. Please choose a JPG or PNG image and try again.'));
-    img.src = URL.createObjectURL(file);
+      reject(new Error('Could not read this photo. Please choose a JPG, PNG, or HEIC image and try again.'));
+    img.src = URL.createObjectURL(imageBlob);
   });
 }
 

@@ -12,6 +12,7 @@
     "@azure/cosmos": "^4.10.2",
     "@azure/storage-blob": "^12.34.0",
     "@google/generative-ai": "^0.24.1",
+    "heic2any": "^0.0.4",
     "next": "16.4.6",
     "next-auth": "^4.24.15",
     "react": "19.3.0",

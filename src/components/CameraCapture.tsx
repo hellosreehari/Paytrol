@@ -260,7 +260,7 @@ export default function CameraCapture({ onCapture, onManualEntry, disabled }: Ca
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         capture="environment"
         onChange={handleFileChange}
         className="hidden"

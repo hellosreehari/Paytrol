@@ -42,10 +42,11 @@ export default function CapturePage() {
       setPhoto(file);
 
       const compressed = await compressImage(file, 1024 * 1024);
+      const uploadFileName = file.name.replace(/\.(heic|heif)$/i, '.jpg') || 'dashboard.jpg';
       const uploadFile =
         compressed instanceof File
           ? compressed
-          : new File([compressed], file.name || 'dashboard.jpg', { type: 'image/jpeg' });
+          : new File([compressed], uploadFileName, { type: 'image/jpeg' });
 
       setStatusMessage('Sending to Gemini Vision AI (analyzing cluster numbers)...');
 
