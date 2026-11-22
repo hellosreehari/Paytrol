@@ -108,7 +108,8 @@ export async function compressImage(file: File, maxSizeBytes: number = 1024 * 10
       tryCompress();
     };
 
-    img.onerror = reject;
+    img.onerror = () =>
+      reject(new Error('Could not read this photo. Please choose a JPG or PNG image and try again.'));
     img.src = URL.createObjectURL(file);
   });
 }
