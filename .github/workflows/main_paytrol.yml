@@ -35,7 +35,6 @@ jobs:
           name: node-app
           path: |
             .next
-            node_modules
             public
             package.json
             package-lock.json
@@ -54,7 +53,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-      
+
+      - name: Set up Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -69,4 +77,4 @@ jobs:
           app-name: 'Paytrol'
           slot-name: 'Production'
           package: .
-          startup-command: npm start
+          startup-command: node node_modules/next/dist/bin/next start
