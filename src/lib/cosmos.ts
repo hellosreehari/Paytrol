@@ -8,7 +8,7 @@ let client: CosmosClient | null = null;
 let database: Database | null = null;
 
 // In-memory fallback store when Azure Cosmos credentials aren't supplied yet
-const memoryStore: Record<string, Map<string, any>> = {
+const memoryStore: Record<string, Map<string, unknown>> = {
   users: new Map(),
   trips: new Map(),
   friendships: new Map(),
@@ -110,7 +110,7 @@ export async function createDocument<T extends { id: string }>(containerId: stri
   }
 
   const container = await getContainer(containerId);
-  const { resource } = await container.items.create(doc as any);
+  const { resource } = await container.items.create(doc as unknown as Record<string, unknown>);
   return resource as unknown as T;
 }
 
@@ -125,7 +125,7 @@ export async function getDocument<T>(containerId: string, id: string): Promise<T
 
   try {
     const container = await getContainer(containerId);
-    const { resource } = await container.item(id, id).read<any>();
+    const { resource } = await container.item(id, id).read();
     return (resource ?? null) as T | null;
   } catch (e: unknown) {
     if ((e as { code?: number }).code === 404) return null;
@@ -142,7 +142,7 @@ export async function updateDocument<T extends { id: string }>(containerId: stri
   }
 
   const container = await getContainer(containerId);
-  const { resource } = await container.item(doc.id, doc.id).replace(doc as any);
+  const { resource } = await container.item(doc.id, doc.id).replace(doc as unknown as Record<string, unknown>);
   return resource as unknown as T;
 }
 
@@ -160,13 +160,13 @@ export async function deleteDocument(containerId: string, id: string): Promise<v
 export async function queryDocuments<T>(
   containerId: string,
   query: string,
-  parameters?: { name: string; value: any }[]
+  parameters?: { name: string; value: unknown }[]
 ): Promise<T[]> {
   if (!hasAzureCosmosConfig()) {
     ensureSeedData();
     const map = memoryStore[containerId];
     if (!map) return [];
-    let items = Array.from(map.values()) as any[];
+    let items = Array.from(map.values()) as Record<string, unknown>[];
 
     // Basic in-memory filter matching common query parameters
     if (parameters && parameters.length > 0) {
@@ -179,7 +179,14 @@ export async function queryDocuments<T>(
               item.toUid === param.value ||
               item.uid1 === param.value ||
               item.uid2 === param.value ||
-              (item.participants && item.participants.some((p: any) => p.uid === param.value))
+              (Array.isArray(item.participants) &&
+                item.participants.some(
+                  (participant) =>
+                    typeof participant === 'object' &&
+                    participant !== null &&
+                    'uid' in participant &&
+                    participant.uid === param.value
+                ))
           );
         } else if (param.name === '@email') {
           items = items.filter((item) => item.email === param.value || item.toEmail === param.value);
@@ -189,7 +196,7 @@ export async function queryDocuments<T>(
 
     // Sort by createdAt desc if applicable
     items.sort((a, b) => {
-      if (a.createdAt && b.createdAt) {
+      if (typeof a.createdAt === 'string' && typeof b.createdAt === 'string') {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
       return 0;
@@ -200,7 +207,7 @@ export async function queryDocuments<T>(
 
   const container = await getContainer(containerId);
   const { resources } = await container.items
-    .query<any>({
+    .query({
       query,
       parameters: (parameters as SqlParameter[]) || [],
     })

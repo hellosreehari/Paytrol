@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createDocument, queryDocuments, getDocument, updateDocument } from '@/lib/cosmos';
-import type { Trip, UserProfile, Balance } from '@/types';
+import type { Trip, TripParticipant, UserProfile, Balance } from '@/types';
 import { generateId } from '@/lib/utils';
 
 // Helper to get normalized balance key
@@ -13,7 +13,7 @@ function getBalanceKey(uidA: string, uidB: string) {
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -26,35 +26,70 @@ export async function GET() {
     );
 
     return NextResponse.json({ success: true, data: trips });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Trips GET error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to load trips' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.json() as {
+      photoURL?: string;
+      distanceKm?: number;
+      avgMileageKmpl?: number;
+      fuelPricePerLiter?: number;
+      fuelUsedLiters?: number;
+      totalCost?: number;
+      splitMode?: 'equal' | 'custom';
+      participants?: TripParticipant[];
+    };
+
+    const distanceKm = Number(body.distanceKm);
+    const avgMileageKmpl = Number(body.avgMileageKmpl);
+    const fuelPricePerLiter = Number(body.fuelPricePerLiter);
+    const fuelUsedLiters = avgMileageKmpl > 0 ? distanceKm / avgMileageKmpl : 0;
+    const totalCost = Math.round(fuelUsedLiters * fuelPricePerLiter * 100) / 100;
+    const participants = Array.isArray(body.participants) ? body.participants : [];
+
+    if (!Number.isFinite(distanceKm) || distanceKm <= 0) {
+      return NextResponse.json({ success: false, error: 'Distance must be greater than zero.' }, { status: 400 });
+    }
+    if (!Number.isFinite(avgMileageKmpl) || avgMileageKmpl <= 0) {
+      return NextResponse.json({ success: false, error: 'Mileage must be greater than zero.' }, { status: 400 });
+    }
+    if (!Number.isFinite(fuelPricePerLiter) || fuelPricePerLiter <= 0) {
+      return NextResponse.json({ success: false, error: 'Fuel price must be greater than zero.' }, { status: 400 });
+    }
+    if (body.splitMode === 'custom') {
+      const customTotal = participants.reduce((sum, p) => sum + (Number(p.customPercentage) || 0), 0);
+      if (customTotal !== 100) {
+        return NextResponse.json({ success: false, error: 'Custom split percentages must total 100.' }, { status: 400 });
+      }
+    }
 
     const trip: Trip = {
       id: generateId(),
       creatorUid: uid,
       creatorName: session?.user?.name || 'Driver',
       photoURL: body.photoURL || '',
-      distanceKm: Number(body.distanceKm) || 0,
-      avgMileageKmpl: Number(body.avgMileageKmpl) || 0,
-      fuelPricePerLiter: Number(body.fuelPricePerLiter) || 105.0,
-      fuelUsedLiters: Number(body.fuelUsedLiters) || 0,
-      totalCost: Number(body.totalCost) || 0,
+      distanceKm,
+      avgMileageKmpl,
+      fuelPricePerLiter,
+      fuelUsedLiters: Math.round(fuelUsedLiters * 1000) / 1000,
+      totalCost,
       splitMode: body.splitMode || 'equal',
-      participants: body.participants || [],
+      participants,
       createdAt: new Date().toISOString(),
     };
 
@@ -104,13 +139,16 @@ export async function POST(req: NextRequest) {
           photo2: participant.photoURL || null,
           netAmount: -share, // uid2 (participant) owes uid1 (creator) `share`
         };
-        await createDocument('balances', newBalance as any);
+        await createDocument('balances', newBalance);
       }
     }
 
     return NextResponse.json({ success: true, data: savedTrip });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Trips POST error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to save trip' },
+      { status: 500 }
+    );
   }
 }

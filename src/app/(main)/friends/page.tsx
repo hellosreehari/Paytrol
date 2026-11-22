@@ -66,10 +66,10 @@ export default function FriendsPage() {
       setInviteEmail('');
       setTab('sent');
       fetchFriendsList();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setBannerNotice({
         type: 'error',
-        text: err.message || 'Could not send invite.',
+        text: err instanceof Error ? err.message : 'Could not send invite.',
       });
     } finally {
       setSending(false);
@@ -96,7 +96,7 @@ export default function FriendsPage() {
     }
   };
 
-  const currentUserId = (user as any)?.uid || 'demo-user';
+  const currentUserId = user?.uid || 'demo-user';
 
   return (
     <div className="space-y-6">

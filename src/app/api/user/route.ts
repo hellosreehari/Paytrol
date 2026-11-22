@@ -7,7 +7,7 @@ import type { UserProfile } from '@/types';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -32,16 +32,19 @@ export async function GET() {
     }
 
     return NextResponse.json({ success: true, data: user });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('User GET error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to load profile' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -77,8 +80,11 @@ export async function POST(req: NextRequest) {
       const result = await createDocument('users', newUser);
       return NextResponse.json({ success: true, data: result });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('User POST error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to update profile' },
+      { status: 500 }
+    );
   }
 }

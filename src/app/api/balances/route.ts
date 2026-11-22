@@ -7,7 +7,7 @@ import type { Balance } from '@/types';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -44,16 +44,19 @@ export async function GET() {
     });
 
     return NextResponse.json({ success: true, data: normalized });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Balances GET error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to load balances' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -70,13 +73,19 @@ export async function POST(req: NextRequest) {
     if (!balance) {
       return NextResponse.json({ success: false, error: 'Balance record not found' }, { status: 404 });
     }
+    if (balance.uid1 !== uid && balance.uid2 !== uid) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
 
     balance.netAmount = 0;
     const updated = await updateDocument('balances', balance);
 
     return NextResponse.json({ success: true, data: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Balances POST error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to settle balance' },
+      { status: 500 }
+    );
   }
 }

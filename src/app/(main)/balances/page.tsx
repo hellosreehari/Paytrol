@@ -119,7 +119,7 @@ export default function BalancesPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {activeBalances.map((bal) => {
+            {activeBalances.map((bal, idx) => {
               const isOwed = bal.amount > 0;
               const absAmount = Math.abs(bal.amount);
               const upiLink = `upi://pay?pa=&pn=${encodeURIComponent(
@@ -128,7 +128,7 @@ export default function BalancesPage() {
 
               return (
                 <div
-                  key={bal.odataId}
+                  key={`${bal.odataId || bal.id}-${idx}`}
                   className="rounded-3xl bg-slate-900/80 border border-slate-800 p-4 space-y-3 shadow-lg"
                 >
                   <div className="flex items-center justify-between">

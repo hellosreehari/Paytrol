@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CameraCapture from '@/components/CameraCapture';
 import { useTripStore } from '@/stores/tripStore';
+import { compressImage } from '@/lib/utils';
 
 export default function CapturePage() {
   const router = useRouter();
-  const { setPhoto, setPhotoPreviewUrl, setExtraction, setExtracting, setExtractionError } = useTripStore();
+  const { setPhoto, setExtraction, setExtracting, setExtractionError } = useTripStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -21,14 +22,16 @@ export default function CapturePage() {
     try {
       setPhoto(file);
 
-      // Create preview url for instant display
-      const previewUrl = URL.createObjectURL(file);
-      setPhotoPreviewUrl(previewUrl);
+      const compressed = await compressImage(file, 1024 * 1024);
+      const uploadFile =
+        compressed instanceof File
+          ? compressed
+          : new File([compressed], file.name || 'dashboard.jpg', { type: 'image/jpeg' });
 
       setStatusMessage('Sending to Gemini Vision AI (analyzing cluster numbers)...');
 
       const formData = new FormData();
-      formData.append('photo', file);
+      formData.append('photo', uploadFile);
 
       const res = await fetch('/api/extract', {
         method: 'POST',
@@ -53,14 +56,21 @@ export default function CapturePage() {
       });
 
       // Save public URL or base64 preview into sessionStorage
-      sessionStorage.setItem('paytrol_photoURL', data.data.photoURL || previewUrl);
+      sessionStorage.setItem(
+        'paytrol_photoURL',
+        data.data.photoURL || useTripStore.getState().photoPreviewUrl || ''
+      );
 
       // Redirect immediately to Mandatory Verification Gate
       router.push('/verify');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Capture error:', err);
-      setErrorMsg(err.message || 'Error processing dashboard photo. Please try again or re-take.');
-      setExtractionError(err.message);
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Error processing dashboard photo. Please try again or re-take.';
+      setErrorMsg(message);
+      setExtractionError(message);
     } finally {
       setIsProcessing(false);
       setExtracting(false);

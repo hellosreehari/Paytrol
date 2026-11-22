@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { cn } from '@/lib/utils';
 
 interface CameraCaptureProps {
   onCapture: (file: File) => void;
@@ -46,7 +45,7 @@ export default function CameraCapture({ onCapture, disabled }: CameraCaptureProp
           videoRef.current.play().catch((e) => console.warn('Play error:', e));
         }
       }, 50);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Camera error:', err);
       setCameraError('Camera access unavailable or declined. Please choose a photo from gallery.');
       setMode('choose');

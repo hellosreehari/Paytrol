@@ -8,7 +8,7 @@ import { generateId } from '@/lib/utils';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
     const email = session?.user?.email?.toLowerCase();
 
     if (!uid) {
@@ -64,16 +64,19 @@ export async function GET() {
         pendingReceived,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Friends GET error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to load friends' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -156,16 +159,19 @@ export async function POST(req: NextRequest) {
         ? 'In-app notification and email invite dispatched!'
         : 'Invite email sent with deep link! Will auto-link once friend signs in.',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Friends POST error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to send invite' },
+      { status: 500 }
+    );
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const uid = (session?.user as any)?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -188,6 +194,15 @@ export async function PATCH(req: NextRequest) {
         { status: 404 }
       );
     }
+    const recipientMatches =
+      friendship.toUid === uid ||
+      friendship.toEmail.toLowerCase() === session?.user?.email?.toLowerCase();
+    if (!recipientMatches) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
 
     friendship.status = action === 'accept' ? 'accepted' : 'declined';
     friendship.toUid = uid;
@@ -197,8 +212,11 @@ export async function PATCH(req: NextRequest) {
 
     const updated = await updateDocument('friendships', friendship);
     return NextResponse.json({ success: true, data: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Friends PATCH error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to update invite' },
+      { status: 500 }
+    );
   }
 }

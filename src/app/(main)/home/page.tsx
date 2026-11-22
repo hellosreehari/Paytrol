@@ -4,12 +4,16 @@ import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils';
-import type { Trip, Balance } from '@/types';
+import type { Trip } from '@/types';
+
+interface HomeBalance {
+  amount: number;
+}
 
 export default function HomePage() {
   const { user, profile } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [balances, setBalances] = useState<any[]>([]);
+  const [balances, setBalances] = useState<HomeBalance[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

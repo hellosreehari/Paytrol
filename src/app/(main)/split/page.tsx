@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, cn } from '@/lib/utils';
-import type { Friendship } from '@/types';
+import type { Friendship, TripParticipant } from '@/types';
 
 interface VerifiedTripData {
   distanceKm: number;
@@ -30,7 +30,12 @@ export default function SplitPage() {
   useEffect(() => {
     const raw = sessionStorage.getItem('paytrol_verified');
     if (raw) {
-      setVerifiedData(JSON.parse(raw));
+      try {
+        setVerifiedData(JSON.parse(raw) as VerifiedTripData);
+      } catch {
+        setVerifiedData(null);
+        sessionStorage.removeItem('paytrol_verified');
+      }
     } else {
       // Default to the 6 km @ 5.8 km/l @ ₹105 sample if accessed directly
       const fallbackData: VerifiedTripData = {
@@ -55,7 +60,7 @@ export default function SplitPage() {
           // If friends exist, auto-select the first one by default for immediate convenience
           if (accepted.length > 0) {
             const firstFriend = accepted[0];
-            const uid = (user as any)?.uid || 'demo-user';
+            const uid = user?.uid || 'demo-user';
             const fUid = firstFriend.fromUid === uid ? firstFriend.toUid : firstFriend.fromUid;
             if (fUid) setSelectedFriends([fUid]);
           }
@@ -67,7 +72,7 @@ export default function SplitPage() {
     loadFriends();
   }, [user]);
 
-  const currentUserId = (user as any)?.uid || 'demo-user';
+  const currentUserId = user?.uid || 'demo-user';
 
   // Toggle friend selection
   const handleToggleFriend = (friendUid: string) => {
@@ -83,6 +88,11 @@ export default function SplitPage() {
 
   const participantCount = allParticipantUids.length;
   const totalCost = verifiedData?.totalCost || 0;
+
+  const customTotal = allParticipantUids.reduce(
+    (sum, uid) => sum + (customPercents[uid] ?? Math.round(100 / participantCount || 1)),
+    0
+  );
 
   // Compute shares based on mode
   const getParticipantShare = (uid: string): number => {
@@ -106,13 +116,21 @@ export default function SplitPage() {
 
   const handleSaveTrip = async () => {
     if (!verifiedData) return;
+    if (splitMode === 'custom' && customTotal !== 100) {
+      setErrorMsg(`Custom shares must total 100%. Current total: ${customTotal}%`);
+      return;
+    }
+    if (participantCount === 0) {
+      setErrorMsg('Include yourself or select at least one friend.');
+      return;
+    }
     setSaving(true);
     setErrorMsg(null);
 
     const photoURL = sessionStorage.getItem('paytrol_photoURL') || '/sample-cluster.jpg';
 
     // Build participants array
-    const participantsList: any[] = [];
+    const participantsList: TripParticipant[] = [];
 
     // Current user if included
     if (includeMe) {
@@ -168,9 +186,9 @@ export default function SplitPage() {
 
       sessionStorage.setItem('paytrol_tripResult', JSON.stringify(data.data));
       router.push('/result');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Trip save error:', err);
-      setErrorMsg(err.message || 'Failed to create trip ledger');
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to create trip ledger');
     } finally {
       setSaving(false);
     }
@@ -231,6 +249,23 @@ export default function SplitPage() {
           />
         </button>
       </div>
+      {includeMe && splitMode === 'custom' && (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 flex items-center gap-3">
+          <span className="text-[11px] text-slate-400">Your share %:</span>
+          <input
+            type="range"
+            min="5"
+            max="100"
+            step="5"
+            value={customPercents[currentUserId] ?? Math.round(100 / participantCount)}
+            onChange={(e) => handleCustomPercentChange(currentUserId, Number(e.target.value))}
+            className="flex-1 accent-indigo-500"
+          />
+          <span className="text-xs font-mono font-bold text-white w-10 text-right">
+            {customPercents[currentUserId] ?? Math.round(100 / participantCount)}%
+          </span>
+        </div>
+      )}
 
       {/* Split Mode Selector (Equal vs Custom) */}
       <div className="space-y-2">
@@ -263,6 +298,20 @@ export default function SplitPage() {
             Custom / Percentage %
           </button>
         </div>
+        {splitMode === 'custom' && (
+          <div
+            className={cn(
+              'flex items-center justify-between rounded-xl px-3 py-2 text-xs',
+              customTotal === 100
+                ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
+                : 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
+            )}
+            aria-live="polite"
+          >
+            <span>Custom allocation</span>
+            <span className="font-bold">{customTotal}% / 100%</span>
+          </div>
+        )}
       </div>
 
       {/* Friends checklist */}
@@ -407,7 +456,11 @@ export default function SplitPage() {
       <button
         type="button"
         onClick={handleSaveTrip}
-        disabled={participantCount === 0 || saving}
+        disabled={
+          participantCount === 0 ||
+          saving ||
+          (splitMode === 'custom' && customTotal !== 100)
+        }
         className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] disabled:bg-slate-800 disabled:text-slate-600 text-white font-semibold rounded-2xl transition-all shadow-lg shadow-indigo-600/30 text-base flex items-center justify-center gap-2"
       >
         {saving ? (

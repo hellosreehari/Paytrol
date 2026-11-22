@@ -44,13 +44,16 @@ export const authOptions: NextAuthOptions = {
       }
       if (account && profile) {
         token.uid = account.providerAccountId || user.id;
-        token.picture = (profile as any).picture || user.image;
+        token.picture =
+          ('picture' in profile && typeof profile.picture === 'string'
+            ? profile.picture
+            : user.image) || undefined;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).uid = token.uid || token.sub || 'demo-user';
+        session.user.uid = token.uid || token.sub || 'demo-user';
         if (token.picture) {
           session.user.image = token.picture as string;
         }

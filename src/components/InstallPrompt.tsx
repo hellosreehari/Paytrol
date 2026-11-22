@@ -15,9 +15,10 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     // Check if already running as standalone PWA
+    const iosNavigator = window.navigator as Navigator & { standalone?: boolean };
     const isStandaloneMode =
       window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
+      iosNavigator.standalone === true;
     setIsStandalone(isStandaloneMode);
 
     if (isStandaloneMode) return;

@@ -7,8 +7,9 @@ import { uploadPhoto } from '@/lib/blob-storage';
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    // Allow demo session if running locally
-    const userId = session?.user ? (session.user as any).uid : 'demo-user';
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     const formData = await req.formData();
     const file = formData.get('photo') as File | null;
@@ -16,6 +17,18 @@ export async function POST(req: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { success: false, error: 'No photo provided. Please capture or select a photo.' },
+        { status: 400 }
+      );
+    }
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json(
+        { success: false, error: 'Please select a valid image file.' },
+        { status: 400 }
+      );
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json(
+        { success: false, error: 'Photo is too large. Please select an image under 10 MB.' },
         { status: 400 }
       );
     }
@@ -48,12 +61,12 @@ export async function POST(req: NextRequest) {
         rawText: extraction.raw_text,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Extract API error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to analyze dashboard photo.',
+        error: error instanceof Error ? error.message : 'Failed to analyze dashboard photo.',
       },
       { status: 500 }
     );
