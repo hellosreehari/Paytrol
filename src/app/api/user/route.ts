@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getDocument, createDocument, updateDocument } from '@/lib/cosmos';
+import { linkGuestContactsForUser } from '@/lib/guest-linking';
 import type { UserProfile } from '@/types';
 
 export async function GET() {
@@ -29,6 +30,10 @@ export async function GET() {
         updatedAt: new Date().toISOString(),
       };
       await createDocument('users', user);
+    }
+
+    if (user) {
+      await linkGuestContactsForUser(user);
     }
 
     return NextResponse.json({ success: true, data: user });

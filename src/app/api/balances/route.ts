@@ -39,6 +39,7 @@ export async function GET() {
         friendUid,
         friendName,
         friendPhoto,
+        isGuest: b.guestUid === friendUid,
         amount,
       };
     });

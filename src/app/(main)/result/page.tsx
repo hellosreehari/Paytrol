@@ -43,6 +43,7 @@ export default function ResultPage() {
     sessionStorage.removeItem('paytrol_verified');
     sessionStorage.removeItem('paytrol_photoURL');
     sessionStorage.removeItem('paytrol_tripResult');
+    sessionStorage.removeItem('paytrol_manualEntry');
     reset();
     router.push('/home');
   };
@@ -63,9 +64,8 @@ export default function ResultPage() {
 
   return (
     <div className="space-y-6">
-      {/* Success Badge */}
       <div className="text-center space-y-2 pt-2">
-        <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow-lg shadow-emerald-500/20">
+        <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-2xl mx-auto">
           ✓
         </div>
         <h1 className="text-2xl font-black text-white">Trip Logged &amp; Split!</h1>
@@ -74,7 +74,6 @@ export default function ResultPage() {
         </p>
       </div>
 
-      {/* Verified Trip Card with Photo Proof */}
       <div className="rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl">
         {trip.photoURL && (
           <div className="relative aspect-[16/9] bg-black">
@@ -83,7 +82,7 @@ export default function ResultPage() {
               alt="Cluster proof"
               className="w-full h-full object-cover"
             />
-            <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-semibold text-emerald-300 flex items-center gap-1.5">
+            <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-slate-200 text-[10px] font-semibold text-slate-700 flex items-center gap-1.5">
               <span>●</span>
               <span>Cluster Photo Proof Attached</span>
             </div>
@@ -91,7 +90,6 @@ export default function ResultPage() {
         )}
 
         <div className="p-5 space-y-4">
-          {/* Main cost figure */}
           <div className="flex items-baseline justify-between border-b border-slate-800 pb-3">
             <div>
               <span className="text-xs text-slate-400 block">Total Fuel Cost</span>
@@ -107,7 +105,6 @@ export default function ResultPage() {
             </div>
           </div>
 
-          {/* Math Breakdown */}
           <div className="grid grid-cols-3 gap-2 bg-slate-800/40 p-3 rounded-2xl border border-slate-800 text-center text-xs">
             <div>
               <span className="text-[10px] text-slate-500 block">Distance</span>
@@ -123,7 +120,6 @@ export default function ResultPage() {
             </div>
           </div>
 
-          {/* Participants & Shares */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs text-slate-400">
               <span className="font-semibold uppercase tracking-wider">
@@ -149,7 +145,7 @@ export default function ResultPage() {
                     <div>
                       <p className="text-xs font-semibold text-white">{p.displayName}</p>
                       <p className="text-[10px] text-slate-400">
-                        {p.settled ? 'Paid (Driver)' : 'Owes driver'}
+                        {p.isGuest ? 'Guest · tracked by name' : p.settled ? 'Paid (Driver)' : 'Owes driver'}
                       </p>
                     </div>
                   </div>
@@ -164,7 +160,6 @@ export default function ResultPage() {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="space-y-2.5">
         <button
           onClick={handleShare}
@@ -178,7 +173,7 @@ export default function ResultPage() {
 
         <button
           onClick={handleDone}
-          className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-semibold rounded-2xl transition-all shadow-lg shadow-indigo-600/30 text-sm"
+          className="w-full py-4 bg-[#315e52] hover:bg-[#244a40] active:scale-[0.99] text-white font-semibold rounded-2xl transition-all text-sm"
         >
           Done (Go to Dashboard)
         </button>

@@ -188,8 +188,26 @@ export async function queryDocuments<T>(
                     participant.uid === param.value
                 ))
           );
+        } else if (param.name === '@ownerUid') {
+          items = items.filter((item) => item.ownerUid === param.value);
+        } else if (param.name === '@contactId') {
+          items = items.filter(
+            (item) =>
+              Array.isArray(item.participants) &&
+              item.participants.some(
+                (participant) =>
+                  typeof participant === 'object' &&
+                  participant !== null &&
+                  'guestContactId' in participant &&
+                  participant.guestContactId === param.value
+              )
+          );
         } else if (param.name === '@email') {
-          items = items.filter((item) => item.email === param.value || item.toEmail === param.value);
+          items = items.filter(
+            (item) =>
+              (typeof item.email === 'string' && item.email.toLowerCase() === String(param.value).toLowerCase()) ||
+              (typeof item.toEmail === 'string' && item.toEmail.toLowerCase() === String(param.value).toLowerCase())
+          );
         }
       }
     }

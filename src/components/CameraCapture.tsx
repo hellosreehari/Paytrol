@@ -4,10 +4,11 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface CameraCaptureProps {
   onCapture: (file: File) => void;
+  onManualEntry?: () => void;
   disabled?: boolean;
 }
 
-export default function CameraCapture({ onCapture, disabled }: CameraCaptureProps) {
+export default function CameraCapture({ onCapture, onManualEntry, disabled }: CameraCaptureProps) {
   const [mode, setMode] = useState<'choose' | 'camera' | 'preview'>('choose');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -203,7 +204,7 @@ export default function CameraCapture({ onCapture, disabled }: CameraCaptureProp
           <button
             onClick={startCamera}
             disabled={disabled}
-            className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-900/40 to-slate-800/80 border border-indigo-500/30 hover:border-indigo-500/60 transition-all text-left group"
+            className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 transition-all text-left group"
           >
             <div className="w-12 h-12 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -233,7 +234,6 @@ export default function CameraCapture({ onCapture, disabled }: CameraCaptureProp
             </div>
           </button>
 
-          {/* Sample photo button */}
           <button
             type="button"
             onClick={handleUseSample}
@@ -243,6 +243,17 @@ export default function CameraCapture({ onCapture, disabled }: CameraCaptureProp
             <span>✨</span>
             <span>Use Demo Dashboard Cluster Photo (6 km, 5.8 km/l)</span>
           </button>
+
+          {onManualEntry && (
+            <button
+              type="button"
+              onClick={onManualEntry}
+              disabled={disabled}
+              className="flex items-center justify-center py-3 px-4 rounded-xl border border-slate-700 text-slate-300 text-xs hover:border-slate-600 hover:text-white transition-colors"
+            >
+              Enter trip details manually
+            </button>
+          )}
         </div>
       )}
 

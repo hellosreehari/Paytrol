@@ -40,10 +40,12 @@ export default function HomePage() {
   const totalOwedToYou = balances
     .filter((b) => b.amount > 0)
     .reduce((acc, curr) => acc + curr.amount, 0);
+  const totalYouOwe = balances
+    .filter((b) => b.amount < 0)
+    .reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
       <header className="flex items-center justify-between pt-1">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
@@ -70,58 +72,49 @@ export default function HomePage() {
         </Link>
       </header>
 
-      {/* Prominent Scan Dashboard Hero CTA */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-6 text-white shadow-2xl shadow-indigo-600/25 border border-indigo-400/30">
+      <div className="relative overflow-hidden rounded-3xl bg-[#edf3ed] p-5 text-slate-900 border border-[#dce7de]">
         <div className="relative z-10 space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-semibold text-indigo-100 border border-white/20">
-            <span>✨</span>
-            <span>Vision AI Extraction</span>
-          </div>
-
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6d806f]">
+            Dashboard scan
+          </span>
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-white">
-              Scan Dashboard
-            </h2>
-            <p className="text-xs text-indigo-100/90 max-w-[220px] mt-1 leading-relaxed">
-              Snap your cluster. We extract trip distance & avg fuel economy automatically.
+            <h2 className="text-xl font-black tracking-tight text-slate-900">Add your next trip</h2>
+            <p className="text-xs text-slate-500 max-w-[260px] mt-1 leading-relaxed">
+              Scan the cluster or enter distance and mileage manually.
             </p>
           </div>
-
-          <div className="pt-2">
+          <div className="pt-1">
             <Link
               href="/capture"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-indigo-950 font-bold text-sm shadow-md hover:bg-indigo-50 active:scale-95 transition-all"
+              className="flex w-full items-center justify-between rounded-xl bg-[#315e52] px-4 py-3 text-white font-semibold text-sm hover:bg-[#244a40] active:scale-[0.99] transition-all"
             >
-              <svg width={18} height={18} className="w-4 h-4 text-indigo-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-              </svg>
-              <span>Start Trip Scan</span>
+              <span>Start trip</span>
+              <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>
-
-        {/* Decorative background glow */}
-        <div className="absolute -right-6 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
       </div>
 
-      {/* Quick Summary Balances Card */}
       <Link
         href="/balances"
         className="block rounded-2xl bg-slate-900/80 border border-slate-800/90 p-4 hover:border-slate-700 transition-colors"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
               <p className="text-xs text-slate-400 font-medium">Pending Settlements</p>
-              <p className="text-base font-bold text-white">
-                {totalOwedToYou > 0 ? (
-                  <span className="text-emerald-400">+{formatCurrency(totalOwedToYou)} owed to you</span>
+              <p className="text-sm font-bold text-white">
+                {totalOwedToYou > 0 && totalYouOwe > 0 ? (
+                  <span>{formatCurrency(totalOwedToYou)} to receive · {formatCurrency(totalYouOwe)} to pay</span>
+                ) : totalOwedToYou > 0 ? (
+                  <span className="text-slate-700">{formatCurrency(totalOwedToYou)} owed to you</span>
+                ) : totalYouOwe > 0 ? (
+                  <span className="text-slate-700">{formatCurrency(totalYouOwe)} to pay</span>
                 ) : (
                   <span>All settled up</span>
                 )}
@@ -135,12 +128,9 @@ export default function HomePage() {
         </div>
       </Link>
 
-      {/* Recent Trips Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-            Recent Trips
-          </h2>
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Recent Trips</h2>
           {trips.length > 0 && (
             <Link href="/history" className="text-xs text-indigo-400 hover:text-indigo-300">
               See All ({trips.length})
@@ -156,16 +146,12 @@ export default function HomePage() {
           </div>
         ) : trips.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-800 p-8 text-center space-y-2">
-            <span className="text-2xl">🚗</span>
             <p className="text-sm font-medium text-slate-300">No trips recorded yet</p>
             <p className="text-xs text-slate-500 max-w-xs mx-auto">
               Snap your first cluster to calculate fuel usage and split costs.
             </p>
             <div className="pt-2">
-              <Link
-                href="/capture"
-                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300"
-              >
+              <Link href="/capture" className="text-xs font-semibold text-indigo-400 hover:text-indigo-300">
                 Scan Now →
               </Link>
             </div>
@@ -179,15 +165,9 @@ export default function HomePage() {
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {trip.photoURL ? (
-                    <img
-                      src={trip.photoURL}
-                      alt="Trip proof"
-                      className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-800"
-                    />
+                    <img src={trip.photoURL} alt="Trip proof" className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-800" />
                   ) : (
-                    <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                      ⛽
-                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">⛽</div>
                   )}
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">
@@ -198,15 +178,10 @@ export default function HomePage() {
                     </p>
                   </div>
                 </div>
-
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-indigo-400">
-                    {formatCurrency(trip.totalCost)}
-                  </p>
+                  <p className="text-sm font-bold text-indigo-400">{formatCurrency(trip.totalCost)}</p>
                   <p className="text-[10px] text-slate-500">
-                    {trip.participants?.length > 1
-                      ? `${trip.participants.length} split`
-                      : 'Solo trip'}
+                    {trip.participants?.length > 1 ? `${trip.participants.length} split` : 'Solo trip'}
                   </p>
                 </div>
               </div>

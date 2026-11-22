@@ -24,15 +24,18 @@ export default function VerifyPage() {
 
   useEffect(() => {
     // Check if we have photo or extraction from store or sessionStorage
+    const manualEntry = sessionStorage.getItem('paytrol_manualEntry') === 'true';
     const storedPhoto = sessionStorage.getItem('paytrol_photoURL');
-    if (storedPhoto) {
+    if (!manualEntry && storedPhoto) {
       setActivePhoto(storedPhoto);
-    } else if (photoPreviewUrl) {
+    } else if (!manualEntry && photoPreviewUrl) {
       setActivePhoto(photoPreviewUrl);
+    } else {
+      setActivePhoto(null);
     }
 
     // If no extraction in memory, check if we should populate with demo extraction (from sample cluster)
-    if (!extraction) {
+    if (!extraction && !manualEntry) {
       const demoExtraction: ExtractionResult = {
         distanceKm: 6.0,
         avgMileageKmpl: 5.8,
@@ -61,6 +64,7 @@ export default function VerifyPage() {
 
     // Save verified calculation to sessionStorage for Split screen
     sessionStorage.setItem('paytrol_verified', JSON.stringify(data));
+    sessionStorage.removeItem('paytrol_manualEntry');
     router.push('/split');
   };
 
@@ -90,7 +94,7 @@ export default function VerifyPage() {
 
       <VerificationForm
         extraction={currentExtraction}
-        photoUrl={activePhoto || '/sample-cluster.jpg'}
+        photoUrl={activePhoto}
         defaultFuelPrice={profile?.lastFuelPrice || 105.0}
         currency={profile?.currency || 'INR'}
         onConfirm={handleConfirm}

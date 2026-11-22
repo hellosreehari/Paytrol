@@ -80,7 +80,6 @@ export default function VerificationForm({
         </div>
       )}
 
-      {/* 2. Mandatory Gate Notice & Confidence Warnings */}
       <div className="flex items-center justify-between text-xs text-slate-400 px-1">
         <span className="font-semibold uppercase tracking-wider text-indigo-400">
           Verification Gate
@@ -102,7 +101,6 @@ export default function VerificationForm({
 
       {/* 3. Pre-filled, editable numeric fields */}
       <div className="space-y-3.5">
-        {/* Distance Field */}
         <div
           className={cn(
             'rounded-2xl border p-4 transition-all duration-150',
@@ -124,8 +122,8 @@ export default function VerificationForm({
                 Low Confidence
               </span>
             ) : (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium">
-                Verified
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+                Checked
               </span>
             )}
           </div>
@@ -145,7 +143,6 @@ export default function VerificationForm({
           </div>
         </div>
 
-        {/* Average Mileage Field */}
         <div
           className={cn(
             'rounded-2xl border p-4 transition-all duration-150',
@@ -167,8 +164,8 @@ export default function VerificationForm({
                 Low Confidence
               </span>
             ) : (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium">
-                Verified
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+                Checked
               </span>
             )}
           </div>
@@ -188,7 +185,6 @@ export default function VerificationForm({
           </div>
         </div>
 
-        {/* Fuel Price Field */}
         <div className="rounded-2xl border bg-slate-800/70 border-slate-700/80 hover:border-slate-600 p-4 transition-colors">
           <div className="flex items-center justify-between mb-1.5">
             <label
@@ -217,54 +213,47 @@ export default function VerificationForm({
         </div>
       </div>
 
-      {/* 4. Live Calculation & Formula Display */}
-      <div className="bg-gradient-to-br from-indigo-950/70 via-slate-900 to-indigo-950/50 border border-indigo-500/30 rounded-2xl p-4 shadow-xl space-y-3">
-        <div className="flex items-center justify-between text-xs text-indigo-300">
+      <div className="border border-slate-200 bg-slate-50 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between text-xs text-slate-700">
           <span className="font-semibold uppercase tracking-wider">Computed Trip Economics</span>
           <span className="text-[11px] text-slate-400">
             {distanceKm} km ÷ {avgMileage} km/L
           </span>
         </div>
-
         <div className="grid grid-cols-2 gap-3 pt-1">
-          <div className="bg-slate-900/60 rounded-xl p-3 border border-indigo-500/20">
+          <div className="bg-white rounded-xl p-3 border border-slate-200">
             <span className="text-[11px] text-slate-400 block mb-0.5">Fuel Consumed</span>
             <span className="text-lg font-bold text-white">
               {fuelUsed.toFixed(3)} <span className="text-xs text-indigo-300 font-normal">Liters</span>
             </span>
           </div>
-
           <div className="bg-slate-900/60 rounded-xl p-3 border border-indigo-500/20">
             <span className="text-[11px] text-slate-400 block mb-0.5">Total Trip Cost</span>
-            <span className="text-lg font-bold text-indigo-400">
-              {formatCurrency(totalCost, currency)}
-            </span>
+            <span className="text-lg font-bold text-slate-900">{formatCurrency(totalCost, currency)}</span>
           </div>
         </div>
-
-        <div className="text-[11px] text-slate-400/90 bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/10 space-y-0.5">
+        <div className="text-[11px] text-slate-500 bg-white p-2.5 rounded-xl border border-slate-200 space-y-0.5">
           <div className="flex justify-between">
             <span>Formula:</span>
-            <span className="font-mono text-indigo-300 text-[10px]">
+            <span className="font-mono text-slate-700 text-[10px]">
               {distanceKm} ÷ {avgMileage} = {fuelUsed.toFixed(3)} L
             </span>
           </div>
           <div className="flex justify-between font-medium">
             <span>Cost:</span>
-            <span className="font-mono text-emerald-400 text-[10px]">
+            <span className="font-mono text-slate-700 text-[10px]">
               {fuelUsed.toFixed(3)} L × ₹{fuelPrice} = {formatCurrency(totalCost, currency)}
             </span>
           </div>
         </div>
       </div>
 
-      {/* 5. Action Button */}
       <button
         type="submit"
         disabled={distanceKm <= 0 || avgMileage <= 0 || fuelPrice <= 0}
-        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] disabled:bg-slate-800 disabled:text-slate-500 text-white font-semibold rounded-2xl transition-all shadow-lg shadow-indigo-600/30 text-base flex items-center justify-center gap-2"
+        className="w-full py-4 bg-[#315e52] hover:bg-[#244a40] active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-500 text-white font-semibold rounded-2xl transition-all text-base flex items-center justify-center gap-2"
       >
-        <span>Confirm & Calculate</span>
+        <span>Confirm &amp; Calculate</span>
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
         </svg>

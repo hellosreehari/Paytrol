@@ -55,12 +55,25 @@ export interface Trip {
 // Participant in a trip
 export interface TripParticipant {
   uid: string;
+  guestContactId?: string;
   displayName: string;
   photoURL: string | null;
+  isGuest?: boolean;
   shareAmount: number;
   customPercentage: number | null;
   settled: boolean;
   settledAt: string | null;
+}
+
+export interface GuestContact {
+  id: string;
+  ownerUid: string;
+  guestUid: string;
+  name: string;
+  email: string | null;
+  linkedUid: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Net balance between two users
@@ -74,6 +87,7 @@ export interface Balance {
   photo1: string | null;
   photo2: string | null;
   netAmount: number;       // positive = uid1 owes uid2
+  guestUid?: string;
 }
 
 // API response wrapper

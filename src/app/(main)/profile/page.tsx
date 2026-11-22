@@ -50,7 +50,6 @@ export default function ProfilePage() {
         </p>
       </header>
 
-      {/* User Info Card */}
       <div className="rounded-3xl bg-slate-900 border border-slate-800 p-5 flex items-center gap-4">
         {user?.image ? (
           <img
@@ -79,7 +78,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Vehicle & Fuel Defaults Form */}
       <form onSubmit={handleSave} className="space-y-5 rounded-3xl bg-slate-900/60 border border-slate-800 p-5">
         <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
           Vehicle &amp; Fuel Defaults
@@ -96,14 +94,14 @@ export default function ProfilePage() {
                 key={ft.value}
                 onClick={() => setFuelType(ft.value)}
                 className={cn(
-                  'flex flex-col items-center justify-center p-3 rounded-2xl border transition-all',
+                'flex flex-col items-center justify-center p-3 rounded-2xl border transition-all',
                   fuelType === ft.value
-                    ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm shadow-indigo-500/30'
-                    : 'bg-slate-800/40 border-slate-700/60 text-slate-400 hover:border-slate-600'
+                  ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm shadow-indigo-500/30'
+                  : 'bg-slate-800/40 border-slate-700/60 text-slate-400 hover:border-slate-600'
                 )}
               >
-                <span className="text-xl mb-0.5">{ft.icon}</span>
-                <span className="text-xs font-semibold">{ft.label}</span>
+              <span className="text-xl mb-0.5">{ft.icon}</span>
+              <span className="text-xs font-semibold">{ft.label}</span>
               </button>
             ))}
           </div>
@@ -145,13 +143,12 @@ export default function ProfilePage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl text-xs transition-colors shadow-md shadow-indigo-600/20"
+          className="w-full py-3 bg-[#315e52] hover:bg-[#244a40] text-white font-bold rounded-2xl text-xs transition-colors"
         >
           {saving ? 'Updating...' : 'Save Preferences'}
         </button>
       </form>
 
-      {/* Sign Out */}
       <button
         onClick={signOut}
         className="w-full py-3.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition-colors"

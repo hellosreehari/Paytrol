@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { createDocument, queryDocuments, getDocument, updateDocument } from '@/lib/cosmos';
+import { createDocument, queryDocuments, getDocument, updateDocument, deleteDocument } from '@/lib/cosmos';
 import type { Friendship, UserProfile } from '@/types';
 import { generateId } from '@/lib/utils';
 
@@ -216,6 +216,38 @@ export async function PATCH(req: NextRequest) {
     console.error('Friends PATCH error:', error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Failed to update invite' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    const uid = session?.user?.uid || (session ? 'demo-user' : null);
+    if (!uid) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json() as { friendshipId?: unknown };
+    if (typeof body.friendshipId !== 'string') {
+      return NextResponse.json({ success: false, error: 'Friendship ID is required.' }, { status: 400 });
+    }
+
+    const friendship = await getDocument<Friendship>('friendships', body.friendshipId);
+    if (!friendship) {
+      return NextResponse.json({ success: false, error: 'Friendship not found.' }, { status: 404 });
+    }
+    if (friendship.fromUid !== uid && friendship.toUid !== uid) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+
+    await deleteDocument('friendships', friendship.id);
+    return NextResponse.json({ success: true, data: { id: friendship.id } });
+  } catch (error: unknown) {
+    console.error('Friends DELETE error:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to unfriend' },
       { status: 500 }
     );
   }

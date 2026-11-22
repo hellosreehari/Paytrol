@@ -1,0 +1,148 @@
+import { createHash } from 'node:crypto';
+import {
+  createDocument,
+  deleteDocument,
+  getDocument,
+  queryDocuments,
+  updateDocument,
+} from '@/lib/cosmos';
+import type { Balance, GuestContact, Trip, TripParticipant, UserProfile } from '@/types';
+
+function getBalanceKey(uidA: string, uidB: string) {
+  return [uidA, uidB].sort().join('_');
+}
+
+export function getGuestUid(ownerUid: string, contactId: string) {
+  return `guest-${createHash('sha256').update(`${ownerUid}:${contactId}`).digest('hex')}`;
+}
+
+export async function linkGuestContact(
+  contact: GuestContact,
+  user: Pick<UserProfile, 'id' | 'displayName' | 'photoURL'>
+): Promise<GuestContact> {
+  if (contact.linkedUid === user.id) return contact;
+  if (contact.ownerUid === user.id) {
+    throw new Error('A guest contact cannot be linked to its owner.');
+  }
+
+  const trips = await queryDocuments<Trip>(
+    'trips',
+    'SELECT * FROM c WHERE ARRAY_CONTAINS(c.participants, {"uid": @uid}, true)',
+    [{ name: '@uid', value: contact.guestUid }]
+  );
+
+  for (const trip of trips) {
+    const updatedParticipants: TripParticipant[] = [];
+    for (const participant of trip.participants) {
+      if (participant.uid !== contact.guestUid) {
+        updatedParticipants.push(participant);
+        continue;
+      }
+
+      const existing = updatedParticipants.find((item) => item.uid === user.id);
+      if (existing) {
+        existing.shareAmount += participant.shareAmount;
+        existing.settled = existing.settled && participant.settled;
+        existing.guestContactId = contact.id;
+        if (!existing.settled) existing.settledAt = null;
+      } else {
+        updatedParticipants.push({
+          ...participant,
+          uid: user.id,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          isGuest: false,
+        });
+      }
+    }
+
+    trip.participants = updatedParticipants;
+    await updateDocument('trips', trip);
+  }
+
+  const guestBalanceId = getBalanceKey(contact.ownerUid, contact.guestUid);
+  const guestBalance = await getDocument<Balance>('balances', guestBalanceId);
+  if (guestBalance) {
+    const linkedBalanceId = getBalanceKey(contact.ownerUid, user.id);
+    const linkedBalance = await getDocument<Balance>('balances', linkedBalanceId);
+
+    if (linkedBalance) {
+      const migratedUid1 = guestBalance.uid1 === contact.guestUid ? user.id : guestBalance.uid1;
+      linkedBalance.netAmount += linkedBalance.uid1 === migratedUid1
+        ? guestBalance.netAmount
+        : -guestBalance.netAmount;
+      await updateDocument('balances', linkedBalance);
+    } else {
+      const migratedBalance: Balance = {
+        ...guestBalance,
+        id: linkedBalanceId,
+        odataId: linkedBalanceId,
+        uid1: guestBalance.uid1 === contact.guestUid ? user.id : guestBalance.uid1,
+        uid2: guestBalance.uid2 === contact.guestUid ? user.id : guestBalance.uid2,
+        name1: guestBalance.uid1 === contact.guestUid ? user.displayName : guestBalance.name1,
+        name2: guestBalance.uid2 === contact.guestUid ? user.displayName : guestBalance.name2,
+        photo1: guestBalance.uid1 === contact.guestUid ? user.photoURL : guestBalance.photo1,
+        photo2: guestBalance.uid2 === contact.guestUid ? user.photoURL : guestBalance.photo2,
+      };
+      delete migratedBalance.guestUid;
+      await createDocument('balances', migratedBalance);
+    }
+
+    await deleteDocument('balances', guestBalanceId);
+  }
+
+  contact.linkedUid = user.id;
+  contact.guestUid = user.id;
+  contact.name = user.displayName;
+  contact.updatedAt = new Date().toISOString();
+  return updateDocument('guests', contact);
+}
+
+export async function renameGuestContact(contact: GuestContact, name: string) {
+  contact.name = name;
+  contact.updatedAt = new Date().toISOString();
+  await updateDocument('guests', contact);
+
+  const trips = await queryDocuments<Trip>(
+    'trips',
+    'SELECT * FROM c WHERE ARRAY_CONTAINS(c.participants, {"guestContactId": @contactId}, true)',
+    [{ name: '@contactId', value: contact.id }]
+  );
+  for (const trip of trips) {
+    trip.participants = trip.participants.map((participant) =>
+      participant.guestContactId === contact.id
+        ? { ...participant, displayName: name }
+        : participant
+    );
+    await updateDocument('trips', trip);
+  }
+
+  const balanceId = getBalanceKey(contact.ownerUid, contact.linkedUid || contact.guestUid);
+  const balance = await getDocument<Balance>('balances', balanceId);
+  if (balance) {
+    if (balance.uid1 === (contact.linkedUid || contact.guestUid)) balance.name1 = name;
+    if (balance.uid2 === (contact.linkedUid || contact.guestUid)) balance.name2 = name;
+    await updateDocument('balances', balance);
+  }
+}
+
+export async function linkGuestContactsForUser(
+  user: Pick<UserProfile, 'id' | 'email' | 'displayName' | 'photoURL'>
+) {
+  if (user.id === 'demo-user') return;
+
+  const email = user.email.trim().toLowerCase();
+  if (!email) return;
+
+  const contacts = await queryDocuments<GuestContact>(
+    'guests',
+    'SELECT * FROM c WHERE c.email = @email AND (NOT IS_DEFINED(c.linkedUid) OR c.linkedUid = null)',
+    [{ name: '@email', value: email }]
+  );
+
+  for (const contact of contacts) {
+    if (contact.ownerUid !== user.id) {
+      await linkGuestContact(contact, user);
+    }
+  }
+}

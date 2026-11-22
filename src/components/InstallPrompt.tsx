@@ -105,7 +105,7 @@ export default function InstallPrompt() {
         {deferredPrompt && (
           <button
             onClick={handleInstallClick}
-            className="text-xs px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors shadow-sm shadow-indigo-500/50"
+            className="text-xs px-3.5 py-1.5 bg-[#315e52] hover:bg-[#244a40] text-white rounded-lg font-medium transition-colors"
           >
             Add to Homescreen
           </button>

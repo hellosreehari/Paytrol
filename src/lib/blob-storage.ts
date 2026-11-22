@@ -18,7 +18,8 @@ async function getContainerClient(): Promise<ContainerClient> {
     }
     const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
     containerClient = blobServiceClient.getContainerClient(containerName);
-    await containerClient.createIfNotExists({ access: 'blob' });
+    await containerClient.createIfNotExists();
+    await containerClient.setAccessPolicy(undefined, []);
   }
   return containerClient;
 }

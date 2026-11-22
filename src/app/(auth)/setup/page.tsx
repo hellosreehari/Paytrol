@@ -65,14 +65,14 @@ export default function SetupPage() {
               className="w-16 h-16 rounded-full mx-auto border-2 border-indigo-500 shadow-md"
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center text-xl font-bold mx-auto">
+            <div             className="w-16 h-16 rounded-2xl bg-[#e3ece6] text-[#315e52] border border-[#bfd0c4] flex items-center justify-center text-xl font-bold mx-auto">
               {user?.name?.[0] || 'P'}
             </div>
           )}
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-[#1b231f]">
             Welcome, {user?.name?.split(' ')[0] || 'Driver'}!
           </h1>
-          <p className="text-xs text-slate-400 max-w-xs mx-auto">
+          <p className="text-xs text-slate-500 max-w-xs mx-auto">
             Set your vehicle & fuel defaults once so every trip calculation is automated.
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function SetupPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Fuel Type */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2.5">
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2.5">
               Default Fuel Type
             </label>
             <div className="grid grid-cols-3 gap-2.5">
@@ -98,8 +98,8 @@ export default function SetupPage() {
                   className={cn(
                     'flex flex-col items-center justify-center p-3.5 rounded-2xl border transition-all text-center',
                     fuelType === ft.value
-                      ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm shadow-indigo-500/30'
-                      : 'bg-slate-800/40 border-slate-700/60 text-slate-400 hover:border-slate-600'
+                      ? 'bg-[#e3ece6] border-[#315e52] text-[#315e52]'
+                      : 'bg-white border-[#dde4dd] text-slate-500 hover:border-[#bcc9bf]'
                   )}
                 >
                   <span className="text-2xl mb-1">{ft.icon}</span>
@@ -111,12 +111,12 @@ export default function SetupPage() {
 
           {/* Currency (Locked / Default to INR) */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
               Default Currency
             </label>
-            <div className="bg-slate-800/50 border border-slate-700/70 rounded-2xl p-3.5 flex items-center justify-between text-sm">
-              <span className="text-white font-medium">Indian Rupee (INR ₹)</span>
-              <span className="text-xs bg-slate-700/60 text-slate-300 px-2.5 py-1 rounded-md">
+            <div className="bg-white border border-[#dde4dd] rounded-2xl p-3.5 flex items-center justify-between text-sm">
+              <span className="text-[#1b231f] font-medium">Indian Rupee (INR ₹)</span>
+              <span className="text-xs bg-[#edf1ec] text-slate-500 px-2.5 py-1 rounded-md">
                 Active
               </span>
             </div>
@@ -126,12 +126,12 @@ export default function SetupPage() {
           <div>
             <label
               htmlFor={fuelPriceId}
-              className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 cursor-pointer"
+              className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2 cursor-pointer"
             >
               Last-Paid Fuel Price (per liter)
             </label>
-            <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3 focus-within:border-indigo-500 transition-colors">
-              <span className="text-xl font-bold text-slate-400">₹</span>
+            <div className="bg-white border border-[#dde4dd] rounded-2xl p-4 flex items-center gap-3 focus-within:border-[#315e52] transition-colors">
+              <span className="text-xl font-bold text-slate-500">₹</span>
               <input
                 id={fuelPriceId}
                 type="number"
@@ -141,7 +141,7 @@ export default function SetupPage() {
                 value={fuelPrice}
                 onChange={(e) => setFuelPrice(e.target.value)}
                 placeholder="105.00"
-                className="w-full bg-transparent text-2xl font-bold text-white outline-none placeholder-slate-600"
+                className="w-full bg-transparent text-2xl font-bold text-[#1b231f] outline-none placeholder-slate-400"
               />
               <span className="text-xs text-slate-400 font-medium">/ Liter</span>
             </div>
@@ -153,7 +153,7 @@ export default function SetupPage() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-semibold rounded-2xl transition-all shadow-lg shadow-indigo-600/30 text-base flex items-center justify-center gap-2"
+            className="w-full py-4 bg-[#315e52] hover:bg-[#244a40] active:scale-[0.99] text-white font-semibold rounded-2xl transition-all text-base flex items-center justify-center gap-2"
           >
             {saving ? (
               <span className="flex items-center gap-2">
