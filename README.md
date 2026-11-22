@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⛽ Paytrol — AI-Powered Trip Fuel Cost Splitter (PWA)
 
-## Getting Started
+> Snap your car's instrument cluster. Let Vision AI extract your trip distance and fuel economy. Verify in one tap, and split the bill with friends.
 
-First, run the development server:
+---
 
+## 🚀 Connecting GitHub to Azure (Zero-Config 1-Click Deployment)
+
+This application is ready to deploy directly to **Azure Static Web Apps** (or Azure App Service) with the included GitHub Actions workflow.
+
+### Step 1: Push to your GitHub Repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git add .
+git commit -m "Initial commit of Paytrol PWA"
+git branch -M main
+git remote add origin https://github.com/<your-username>/paytrol.git
+git push -u origin main
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Step 2: Connect Azure to your GitHub Repo
+1. Go to the [Azure Portal](https://portal.azure.com/).
+2. Click **Create a resource** → Search for **Static Web App** → Click **Create**.
+3. Fill in:
+   - **Subscription**: Your company Azure subscription (Free)
+   - **Resource Group**: Select or create one (e.g., `rg-paytrol`)
+   - **Name**: `paytrol`
+   - **Plan type**: **Free**
+   - **Deployment details**: Select **GitHub** and authorize.
+   - **Repository**: Select your `paytrol` repository.
+   - **Branch**: `main`
+   - **Build Presets**: Select **Next.js**
+     - App location: `/`
+     - Api location: (leave blank)
+     - Output location: (leave blank)
+4. Click **Review + Create**.
+   - Azure automatically adds a deployment token to your GitHub repository secrets and triggers `.github/workflows/azure-static-web-apps.yml`.
+   - Your PWA will be live on an Azure URL (e.g. `https://salmon-island-...azurestaticapps.net`) in ~2 minutes!
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Step 3: Configure Environment Variables in Azure Portal
+In your Azure Static Web App, navigate to **Configuration** → **Application settings** and add:
+- `NEXTAUTH_SECRET`: Random 32+ character string
+- `NEXTAUTH_URL`: Your Azure Static Web App domain (e.g. `https://<app>.azurestaticapps.net`)
+- `GOOGLE_CLIENT_ID`: Your Google OAuth Client ID
+- `GOOGLE_CLIENT_SECRET`: Your Google OAuth Client Secret
+- `GEMINI_API_KEY`: Google AI Studio Gemini API key (Free tier: 15 req/min)
+- `COSMOS_ENDPOINT`: Your Azure Cosmos DB endpoint (Optional - in-memory fallback included)
+- `COSMOS_KEY`: Your Azure Cosmos DB key (Optional)
+- `AZURE_STORAGE_CONNECTION_STRING`: Your Azure Blob Storage connection string (Optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🛠️ Local Development
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# 1. Install dependencies
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 2. Run dev server
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🌟 Core Features & User Flows
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 1. Authentication & Profile Setup
+- **Google Sign-In**: 1-tap OAuth login (captures name, email, profile photo).
+- **Demo Mode**: Instant 1-click login without credentials for testing.
+- **Vehicle & Fuel Defaults**: Set default fuel type (**Petrol**, **Diesel**, **CNG**), currency (**INR ₹**), and last-paid fuel price per liter.
+
+### 2. Capture, AI Extraction & Verification
+- **In-App Camera with Framing Guide**: Rectangular target to align trip distance and avg mileage. Also supports gallery upload and a pre-loaded sample cluster photo.
+- **Gemini Vision Extraction**: Vision-capable AI specifically extracts trip distance (under *"Since start"*) and average fuel economy while ignoring total odometer (e.g. 66639 km) and range.
+- **Mandatory Verification Gate**:
+  - Cropped photo preview at top with expand/collapse toggle.
+  - Pre-filled editable numeric fields: Distance (km), Avg Mileage (km/L), Fuel Price (₹/L).
+  - Yellow highlight banner if AI confidence is low due to glare or blur.
+  - Real-time math:
+    $$\text{Fuel Used (L)} = \frac{\text{Distance (km)}}{\text{Average Mileage (km/L)}}$$
+    $$\text{Total Cost} = \text{Fuel Used (L)} \times \text{Fuel Price per Liter}$$
+    *(For 6 km at 5.8 km/L and ₹105/L: $6 \div 5.8 = 1.034\text{ L}$, totaling ₹108.62.)*
+
+### 3. Friends Network & Email Invites
+- **Invite Friends**: Enter friend's email address.
+- **Existing User**: Instant in-app notification + email invite with Accept / Decline.
+- **New User**: Email with deep link; auto-links as friend upon first Google login.
+- **3 Tab Views**: `Friends`, `Pending Sent`, and `Pending Received`.
+
+### 4. Trip Splitting & Ledger
+- Checkboxes for friends who joined + **"Include me in the split"** toggle.
+- **Split Modes**: **Equal Split** (default) or **Custom Percentage %**.
+- Trip card with attached photo proof, formula breakdown, and individual shares.
+
+### 5. Balances & 1-Tap UPI Settlement
+- Aggregates net balances across all trips (e.g., *"Rahul owes you ₹420"*).
+- **Mark as Settled** action.
+- **Pay via UPI** deep link (`upi://pay?pa=...&am=...`) for instant settlement via Google Pay, PhonePe, or Paytm on mobile.
+
+### 6. PWA & Add to Homescreen
+- Fully installable Progressive Web App with service worker, `manifest.json`, and native Add to Homescreen prompts for Android & iOS Safari.

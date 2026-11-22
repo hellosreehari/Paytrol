@@ -9,9 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@azure/cosmos": "^4.10.2",
+    "@azure/storage-blob": "^12.34.0",
+    "@google/generative-ai": "^0.24.1",
     "next": "16.4.6",
+    "next-auth": "^4.24.15",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
