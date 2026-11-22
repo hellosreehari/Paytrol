@@ -65,7 +65,10 @@ function ensureSeedData() {
 }
 
 function hasAzureCosmosConfig(): boolean {
-  return Boolean(endpoint && key && endpoint.startsWith('https://') && key !== 'your-cosmos-key');
+  if (!endpoint || !key) return false;
+  if (endpoint.includes('your-cosmos-account') || endpoint.includes('example.com')) return false;
+  if (key.includes('your-') || key.includes('primary-cosmos-key')) return false;
+  return endpoint.startsWith('https://');
 }
 
 function getClient(): CosmosClient {

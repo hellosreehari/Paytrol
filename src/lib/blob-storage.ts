@@ -6,11 +6,9 @@ const containerName = process.env.AZURE_STORAGE_CONTAINER || 'dashboard-photos';
 let containerClient: ContainerClient | null = null;
 
 function hasBlobConfig(): boolean {
-  return Boolean(
-    connectionString &&
-    connectionString.includes('DefaultEndpointsProtocol=') &&
-    !connectionString.includes('AccountName=your_account')
-  );
+  if (!connectionString) return false;
+  if (connectionString.includes('AccountName=...') || connectionString.includes('your_account')) return false;
+  return connectionString.includes('DefaultEndpointsProtocol=');
 }
 
 async function getContainerClient(): Promise<ContainerClient> {

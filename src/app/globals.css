@@ -13,6 +13,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Default SVG constraints */
+svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+svg:not([width]) {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 /* Safe area padding for notched smartphones (iPhone / Android) */
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);

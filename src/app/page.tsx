@@ -33,8 +33,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col justify-between px-6 py-12 max-w-md mx-auto">
       {/* Top Brand Hero */}
       <div className="pt-8 text-center space-y-4">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-xl shadow-indigo-600/30 border border-indigo-400/30">
-          <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-xl shadow-indigo-600/30 border border-indigo-400/30 shrink-0">
+          <svg width={40} height={40} className="w-10 h-10 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -93,7 +93,7 @@ export default function LoginPage() {
           onClick={signInGoogle}
           className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-white hover:bg-slate-100 active:scale-[0.99] text-slate-900 font-semibold rounded-2xl transition-all shadow-lg text-sm"
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
+          <svg width={20} height={20} className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
               fill="#4285F4"
