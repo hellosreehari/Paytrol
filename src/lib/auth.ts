@@ -1,7 +1,5 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { randomBytes } from 'node:crypto';
 
 const providers: NextAuthOptions['providers'] = [];
 
@@ -14,35 +12,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-// Credentials provider is only available during local development.
-if (process.env.NODE_ENV !== 'production') {
-  providers.push(
-    CredentialsProvider({
-      id: 'demo',
-      name: 'Demo Account',
-      credentials: {
-        email: { label: 'Email', type: 'email', placeholder: 'driver@paytrol.app' },
-        name: { label: 'Name', type: 'text', placeholder: 'Sreehari' },
-      },
-      async authorize(credentials) {
-        const email = credentials?.email || 'driver@paytrol.app';
-        const name = credentials?.name || 'Sreehari';
-        return {
-          id: 'demo-user',
-          name,
-          email,
-          image: null,
-        };
-      },
-    })
-  );
-}
-
-const nextAuthSecret =
-  process.env.NEXTAUTH_SECRET ||
-  (process.env.NODE_ENV !== 'production'
-    ? randomBytes(32).toString('hex')
-    : undefined);
+const nextAuthSecret = process.env.NEXTAUTH_SECRET;
 export const authOptions: NextAuthOptions = {
   providers,
   callbacks: {
@@ -64,7 +34,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.uid = token.uid || token.sub || 'demo-user';
+        session.user.uid = token.uid || token.sub || '';
         if (token.picture) {
           session.user.image = token.picture as string;
         }

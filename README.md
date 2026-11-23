@@ -67,11 +67,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 1. Authentication & Profile Setup
 - **Google Sign-In**: 1-tap OAuth login (captures name, email, profile photo).
-- **Demo Mode**: Instant 1-click login without credentials for testing.
 - **Vehicle & Fuel Defaults**: Set default fuel type (**Petrol**, **Diesel**, **CNG**), currency (**INR ₹**), and last-paid fuel price per liter.
 
 ### 2. Capture, AI Extraction & Verification
-- **In-App Camera with Framing Guide**: Rectangular target to align trip distance and avg mileage. Also supports gallery upload and a pre-loaded sample cluster photo.
+- **In-App Camera with Framing Guide**: Rectangular target to align trip distance and avg mileage. Also supports gallery upload.
 - **Gemini Vision Extraction**: Vision-capable AI specifically extracts trip distance (under *"Since start"*) and average fuel economy while ignoring total odometer (e.g. 66639 km) and range.
 - **Mandatory Verification Gate**:
   - Cropped photo preview at top with expand/collapse toggle.

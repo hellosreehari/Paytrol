@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function LoginPage() {
-  const { isAuthenticated, isLoading, needsSetup, signInGoogle, signInDemo } = useAuth();
+  const { isAuthenticated, isLoading, needsSetup, signInGoogle } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -86,16 +86,6 @@ export default function LoginPage() {
           </svg>
           <span>Continue with Google</span>
         </button>
-
-        {/* Demo Fast Login */}
-        {process.env.NODE_ENV !== 'production' && (
-          <button
-            onClick={signInDemo}
-            className="w-full py-3.5 px-4 bg-[#edf2ed] hover:bg-[#e4ebe5] text-[#526158] font-medium rounded-xl transition-all border border-[#dde4dd] text-sm flex items-center justify-center gap-2"
-          >
-            <span>⚡ Try Demo Account (Instant Login)</span>
-          </button>
-        )}
 
         <p className="text-[11px] text-center text-slate-600 pt-1">Add Paytrol to your home screen for the best experience.</p>
       </div>

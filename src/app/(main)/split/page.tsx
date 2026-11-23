@@ -68,7 +68,7 @@ export default function SplitPage() {
           // If friends exist, auto-select the first one by default for immediate convenience
           if (accepted.length > 0) {
             const firstFriend = accepted[0];
-            const uid = user?.uid || 'demo-user';
+            const uid = user?.uid || '';
             const fUid = firstFriend.fromUid === uid ? firstFriend.toUid : firstFriend.fromUid;
             if (fUid) setSelectedFriends([fUid]);
           }
@@ -81,7 +81,7 @@ export default function SplitPage() {
     loadFriends();
   }, [user]);
 
-  const currentUserId = user?.uid || 'demo-user';
+  const currentUserId = user?.uid || '';
   const friendUserIds = new Set(
     friends
       .map((friend) => friend.fromUid === currentUserId ? friend.toUid : friend.fromUid)

@@ -18,7 +18,7 @@ import { generateId } from '@/lib/utils';
 
 async function getOwnerUid() {
   const session = await getServerSession(authOptions);
-  return session?.user?.uid || (session ? 'demo-user' : null);
+  return session?.user?.uid || null;
 }
 
 export async function GET() {

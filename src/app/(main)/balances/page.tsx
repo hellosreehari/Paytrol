@@ -92,7 +92,7 @@ export default function BalancesPage() {
     .reduce((sum, b) => sum + Math.abs(b.amount), 0);
 
   const activeBalances = balances.filter((b) => Math.abs(b.amount) > 0.01);
-  const currentUserId = user?.uid || 'demo-user';
+  const currentUserId = user?.uid || '';
 
   const getTripBreakdown = (friendUid: string) => {
     return trips

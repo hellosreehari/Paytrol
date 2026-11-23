@@ -129,7 +129,6 @@ export async function renameGuestContact(contact: GuestContact, name: string) {
 export async function linkGuestContactsForUser(
   user: Pick<UserProfile, 'id' | 'email' | 'displayName' | 'photoURL'>
 ) {
-  if (user.id === 'demo-user') return;
 
   const email = user.email.trim().toLowerCase();
   if (!email) return;

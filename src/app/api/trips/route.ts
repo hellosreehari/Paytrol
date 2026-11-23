@@ -31,7 +31,7 @@ async function isAcceptedFriend(ownerUid: string, participantUid: string): Promi
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const uid = session?.user?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || null;
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -68,7 +68,7 @@ export async function GET() {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const uid = session?.user?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || null;
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -118,7 +118,7 @@ export async function DELETE(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const uid = session?.user?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || null;
 
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const uid = session?.user?.uid || (session ? 'demo-user' : null);
+    const uid = session?.user?.uid || null;
     if (!uid) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }

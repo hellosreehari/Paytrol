@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useTripStore } from '@/stores/tripStore';
 import { useAuth } from '@/hooks/useAuth';
 import VerificationForm from '@/components/VerificationForm';
-import type { ExtractionResult } from '@/types';
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -16,7 +15,6 @@ export default function VerifyPage() {
     setDistanceKm,
     setAvgMileageKmpl,
     setFuelPricePerLiter,
-    setExtraction,
     setPhotoPreviewUrl,
   } = useTripStore();
 
@@ -34,22 +32,7 @@ export default function VerifyPage() {
       setActivePhoto(null);
     }
 
-    // If no extraction in memory, check if we should populate with demo extraction (from sample cluster)
-    if (!extraction && !manualEntry) {
-      const demoExtraction: ExtractionResult = {
-        distanceKm: 6.0,
-        avgMileageKmpl: 5.8,
-        confidenceDistance: 'high',
-        confidenceMileage: 'high',
-        rawText: 'Since start: 0:35h, 6km, Avg 5.8 km/l, Avg 11km/h, 12km/h, Range 460km, Odo 66639km',
-      };
-      setExtraction(demoExtraction);
-      if (!storedPhoto) {
-        setActivePhoto('/sample-cluster.jpg');
-        setPhotoPreviewUrl('/sample-cluster.jpg');
-      }
-    }
-  }, [extraction, photoPreviewUrl, setExtraction, setPhotoPreviewUrl]);
+  }, [extraction, photoPreviewUrl, setPhotoPreviewUrl]);
 
   const handleConfirm = (data: {
     distanceKm: number;

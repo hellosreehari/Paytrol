@@ -97,24 +97,6 @@ export default function CameraCapture({ onCapture, onManualEntry, disabled }: Ca
     }
   };
 
-  const handleUseSample = async () => {
-    try {
-      const res = await fetch('/sample-cluster.jpg');
-      const blob = await res.blob();
-      const file = new File([blob], 'sample-dashboard-cluster.jpg', { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-      setMode('preview');
-      onCapture(file);
-    } catch (err) {
-      console.error('Could not load sample cluster image:', err);
-      // Fallback: create mock file
-      const blob = new Blob(['sample-image'], { type: 'image/jpeg' });
-      const file = new File([blob], 'sample-dashboard-cluster.jpg', { type: 'image/jpeg' });
-      onCapture(file);
-    }
-  };
-
   const retake = () => {
     if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl);
@@ -232,16 +214,6 @@ export default function CameraCapture({ onCapture, onManualEntry, disabled }: Ca
               <p className="font-semibold text-white text-base">Choose from Gallery</p>
               <p className="text-xs text-slate-400">Pick an existing dashboard screenshot or photo</p>
             </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleUseSample}
-            disabled={disabled}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-indigo-300 text-xs hover:bg-indigo-900/30 transition-colors"
-          >
-            <span>✨</span>
-            <span>Use Demo Dashboard Cluster Photo (6 km, 5.8 km/l)</span>
           </button>
 
           {onManualEntry && (

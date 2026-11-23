@@ -7,7 +7,7 @@ import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 
 export default function HistoryPage() {
   const { user } = useAuth();
-  const currentUserId = user?.uid || 'demo-user';
+  const currentUserId = user?.uid || '';
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
@@ -49,10 +49,10 @@ export default function HistoryPage() {
     setMileageDraft(String(trip.avgMileageKmpl));
     setFuelPriceDraft(String(trip.fuelPricePerLiter));
     setEditError(null);
-    setIncludeCreatorDraft(trip.participants.some((participant) => participant.uid === (user?.uid || 'demo-user')));
+    setIncludeCreatorDraft(trip.participants.some((participant) => participant.uid === currentUserId));
     setSelectedParticipantIds(
       trip.participants
-        .filter((participant) => participant.uid !== (user?.uid || 'demo-user'))
+        .filter((participant) => participant.uid !== currentUserId)
         .map((participant) =>
           participant.guestContactId ? `guest:${participant.guestContactId}` : `friend:${participant.uid}`
         )

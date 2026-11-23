@@ -2,7 +2,6 @@ const CACHE_NAME = 'paytrol-v1';
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
-  '/sample-cluster.jpg',
 ];
 
 self.addEventListener('install', (event) => {

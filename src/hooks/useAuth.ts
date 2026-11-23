@@ -57,10 +57,6 @@ export function useAuth() {
     signIn('google', { callbackUrl: '/home' });
   };
 
-  const handleSignInDemo = () => {
-    signIn('demo', { callbackUrl: '/home' });
-  };
-
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' });
   };
@@ -73,7 +69,6 @@ export function useAuth() {
     isLoading: isLoading || loading,
     needsSetup: isAuthenticated && (!profile || !profile.lastFuelPrice),
     signInGoogle: handleSignInGoogle,
-    signInDemo: handleSignInDemo,
     signOut: handleSignOut,
     fetchProfile,
     updateProfile,

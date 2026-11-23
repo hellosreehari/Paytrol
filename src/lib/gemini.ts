@@ -20,15 +20,7 @@ export async function extractDashboardReadings(
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === 'your-gemini-api-key') {
-    console.warn('GEMINI_API_KEY not configured. Using fallback demo extraction data.');
-    // Provide realistic extracted data matching standard dashboard readings (like the user sample)
-    return {
-      distance_km: 6.0,
-      avg_mileage_kmpl: 5.8,
-      confidence_distance: 'high',
-      confidence_mileage: 'high',
-      raw_text: 'Trip: Since start: 0:35h, 6 km, Avg. 5.8 km/l, Avg. 11 km/h, 12 km/h, Range: 460 km, Odo: 66639 km',
-    };
+    throw new Error('GEMINI_API_KEY is not configured.');
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);

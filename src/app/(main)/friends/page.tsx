@@ -203,7 +203,7 @@ export default function FriendsPage() {
     }
   };
 
-  const currentUserId = user?.uid || 'demo-user';
+  const currentUserId = user?.uid || '';
 
   return (
     <div className="space-y-6">

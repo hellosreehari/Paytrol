@@ -15,55 +15,6 @@ const memoryStore: Record<string, Map<string, unknown>> = {
   balances: new Map(),
 };
 
-// Seed demo friends & sample balance for immediate testing if empty
-function ensureSeedData() {
-  const friendsMap = memoryStore.friendships;
-  if (friendsMap.size === 0) {
-    friendsMap.set('friend-1', {
-      id: 'friend-1',
-      fromUid: 'demo-user',
-      fromName: 'Demo Driver',
-      fromEmail: 'driver@example.com',
-      fromPhoto: null,
-      toUid: 'rahul-uid',
-      toEmail: 'rahul@example.com',
-      toName: 'Rahul Sharma',
-      toPhoto: null,
-      status: 'accepted',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    friendsMap.set('friend-2', {
-      id: 'friend-2',
-      fromUid: 'demo-user',
-      fromName: 'Demo Driver',
-      fromEmail: 'driver@example.com',
-      fromPhoto: null,
-      toUid: 'priya-uid',
-      toEmail: 'priya@example.com',
-      toName: 'Priya Patel',
-      toPhoto: null,
-      status: 'accepted',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-  }
-
-  const balancesMap = memoryStore.balances;
-  if (balancesMap.size === 0) {
-    balancesMap.set('demo-user_rahul-uid', {
-      odataId: 'demo-user_rahul-uid',
-      uid1: 'demo-user',
-      uid2: 'rahul-uid',
-      name1: 'You',
-      name2: 'Rahul Sharma',
-      photo1: null,
-      photo2: null,
-      netAmount: -420, // Rahul owes demo-user 420
-    });
-  }
-}
-
 function hasAzureCosmosConfig(): boolean {
   if (!endpoint || !key) return false;
   if (endpoint.includes('your-cosmos-account') || endpoint.includes('example.com')) return false;
@@ -103,7 +54,6 @@ async function getContainer(containerId: string): Promise<Container> {
 
 export async function createDocument<T extends { id: string }>(containerId: string, doc: T): Promise<T> {
   if (!hasAzureCosmosConfig()) {
-    ensureSeedData();
     if (!memoryStore[containerId]) memoryStore[containerId] = new Map();
     memoryStore[containerId].set(doc.id, JSON.parse(JSON.stringify(doc)));
     return doc;
@@ -116,7 +66,6 @@ export async function createDocument<T extends { id: string }>(containerId: stri
 
 export async function getDocument<T>(containerId: string, id: string): Promise<T | null> {
   if (!hasAzureCosmosConfig()) {
-    ensureSeedData();
     const map = memoryStore[containerId];
     if (!map) return null;
     const doc = map.get(id);
@@ -135,7 +84,6 @@ export async function getDocument<T>(containerId: string, id: string): Promise<T
 
 export async function updateDocument<T extends { id: string }>(containerId: string, doc: T): Promise<T> {
   if (!hasAzureCosmosConfig()) {
-    ensureSeedData();
     if (!memoryStore[containerId]) memoryStore[containerId] = new Map();
     memoryStore[containerId].set(doc.id, JSON.parse(JSON.stringify(doc)));
     return doc;
@@ -163,7 +111,6 @@ export async function queryDocuments<T>(
   parameters?: { name: string; value: unknown }[]
 ): Promise<T[]> {
   if (!hasAzureCosmosConfig()) {
-    ensureSeedData();
     const map = memoryStore[containerId];
     if (!map) return [];
     let items = Array.from(map.values()) as Record<string, unknown>[];
