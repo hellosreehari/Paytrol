@@ -95,6 +95,7 @@ export default function CameraCapture({ onCapture, onManualEntry, disabled }: Ca
       setMode('preview');
       onCapture(file);
     }
+    e.target.value = '';
   };
 
   const retake = () => {
@@ -233,7 +234,6 @@ export default function CameraCapture({ onCapture, onManualEntry, disabled }: Ca
         ref={fileInputRef}
         type="file"
         accept="image/*,.heic,.heif"
-        capture="environment"
         onChange={handleFileChange}
         className="hidden"
       />
