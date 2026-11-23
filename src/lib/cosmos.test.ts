@@ -15,6 +15,10 @@ describe('parseCosmosConnectionString', () => {
     });
   });
 
+  it('ignores surrounding quotes', () => {
+    expect(parseCosmosConnectionString('"AccountEndpoint=https://x/;AccountKey=k=="')).toEqual({ endpoint: 'https://x/', key: 'k==' });
+  });
+
   it('returns nothing for a missing or keyless string', () => {
     expect(parseCosmosConnectionString(undefined)).toEqual({});
     expect(parseCosmosConnectionString('AccountEndpoint=https://x/;')).toEqual({ endpoint: 'https://x/', key: undefined });

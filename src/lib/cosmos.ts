@@ -9,6 +9,8 @@ export function parseCosmosConnectionString(connectionString: string | undefined
   key?: string;
 } {
   if (!connectionString) return {};
+  // Tolerate a value pasted with surrounding quotes.
+  connectionString = connectionString.trim().replace(/^(['"])(.*)\1$/, '$2');
   const parts: Record<string, string> = {};
   for (const segment of connectionString.split(';')) {
     const eq = segment.indexOf('=');
