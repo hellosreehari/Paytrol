@@ -19,11 +19,28 @@ export function parseCosmosConnectionString(connectionString: string | undefined
   return { endpoint: parts.accountendpoint || undefined, key: parts.accountkey || undefined };
 }
 
-// Either a connection string (AZURE_COSMOS_CONNECTIONSTRING is what Azure's
-// Service Connector sets in App Service) or an explicit endpoint + key.
-// The explicit pair wins when both are present.
+// Names a Cosmos connection string can arrive under. App Service puts values
+// from its "Connection strings" tab into prefixed variables (DOCDBCONNSTR_ for
+// type DocDb, CUSTOMCONNSTR_ for Custom), while the "App settings" tab and
+// Service Connector use the plain name.
+export const COSMOS_CONNECTION_STRING_VARIABLES = [
+  'AZURE_COSMOS_CONNECTIONSTRING',
+  'COSMOS_CONNECTION_STRING',
+  'DOCDBCONNSTR_AZURE_COSMOS_CONNECTIONSTRING',
+  'CUSTOMCONNSTR_AZURE_COSMOS_CONNECTIONSTRING',
+  'DOCDBCONNSTR_COSMOS_CONNECTION_STRING',
+  'CUSTOMCONNSTR_COSMOS_CONNECTION_STRING',
+] as const;
+
+function findConnectionStringVariable(): string | undefined {
+  return COSMOS_CONNECTION_STRING_VARIABLES.find((name) => process.env[name]?.trim());
+}
+
+const connectionStringVariable = findConnectionStringVariable();
+// Either a connection string or an explicit endpoint + key. The explicit pair
+// wins when both are present.
 const connectionStringConfig = parseCosmosConnectionString(
-  process.env.AZURE_COSMOS_CONNECTIONSTRING || process.env.COSMOS_CONNECTION_STRING
+  connectionStringVariable ? process.env[connectionStringVariable] : undefined
 );
 const endpoint = process.env.COSMOS_ENDPOINT || connectionStringConfig.endpoint;
 const key = process.env.COSMOS_KEY || connectionStringConfig.key;
@@ -41,6 +58,33 @@ const memoryStore: Record<string, Map<string, unknown>> = {
   friendships: new Map(),
   balances: new Map(),
 };
+
+/**
+ * Explains, without revealing any secret, why Cosmos isn't configured.
+ * Used by /api/health so a failed deploy says what to fix.
+ */
+export function describeCosmosConfigProblem(): string {
+  if (!connectionStringVariable && !process.env.COSMOS_ENDPOINT && !process.env.COSMOS_KEY) {
+    return 'No Cosmos setting found. Set AZURE_COSMOS_CONNECTIONSTRING (or COSMOS_ENDPOINT and COSMOS_KEY) in App settings';
+  }
+  if (connectionStringVariable) {
+    const raw = process.env[connectionStringVariable] ?? '';
+    if (/^mongodb(\+srv)?:\/\//i.test(raw.trim())) {
+      return `${connectionStringVariable} is a MongoDB connection string; the app needs the Cosmos DB for NoSQL one (AccountEndpoint=...;AccountKey=...)`;
+    }
+    if (raw.trim().startsWith('@Microsoft.KeyVault')) {
+      return `${connectionStringVariable} is an unresolved Key Vault reference; check the app's access to the vault`;
+    }
+    if (!connectionStringConfig.endpoint) return `${connectionStringVariable} has no AccountEndpoint=... part`;
+    if (!connectionStringConfig.key) {
+      return `${connectionStringVariable} has no AccountKey=... part (identity-based connections are not supported; use the key-based connection string)`;
+    }
+  }
+  if (!endpoint) return 'COSMOS_KEY is set but COSMOS_ENDPOINT is missing';
+  if (!key) return 'COSMOS_ENDPOINT is set but COSMOS_KEY is missing';
+  if (!endpoint.startsWith('https://')) return 'The Cosmos endpoint must start with https://';
+  return 'The Cosmos settings still contain placeholder values';
+}
 
 function isAzureCosmosConfigured(): boolean {
   if (!endpoint || !key) return false;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStorageMode, pingDatabase } from '@/lib/cosmos';
+import { describeCosmosConfigProblem, getStorageMode, pingDatabase } from '@/lib/cosmos';
 import { hasBlobConfig, pingBlobStorage } from '@/lib/blob-storage';
 import { getGeminiModelName, hasGeminiConfig } from '@/lib/gemini';
 
@@ -29,7 +29,7 @@ export async function GET() {
       ? await check(pingDatabase, 'Connected to Azure Cosmos DB')
       : storageMode === 'memory'
         ? { status: 'warning', detail: 'Using the temporary in-memory store: data is lost on restart' }
-        : { status: 'error', detail: 'AZURE_COSMOS_CONNECTIONSTRING (or COSMOS_ENDPOINT / COSMOS_KEY) is not set' };
+        : { status: 'error', detail: describeCosmosConfigProblem() };
 
   const photos: Check = hasBlobConfig()
     ? await check(pingBlobStorage, 'Connected to Azure Blob Storage')

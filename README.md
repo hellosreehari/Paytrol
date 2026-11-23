@@ -26,6 +26,8 @@ Paytrol runs on **Azure App Service (Linux, Node 24)** and deploys from GitHub A
 | `AZURE_STORAGE_CONNECTION_STRING` | recommended | photos go to the private `dashboard-photos` container; without it photos are stored inside trips |
 | `CRON_SECRET` | recommended | protects `/api/retention/cleanup` |
 
+The connection string can live in either the **App settings** or the **Connection strings** tab (type DocDb or Custom); it must be the key-based Cosmos DB for NoSQL string (`AccountEndpoint=...;AccountKey=...`), not a MongoDB one. If a deploy fails its health check, `/api/health` names the exact problem.
+
 Without the Cosmos settings the app refuses to save data in production rather than silently keeping it in memory
 (set `ALLOW_MEMORY_STORE=true` only for a throwaway demo).
 
