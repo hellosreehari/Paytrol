@@ -1,0 +1,22 @@
+// A static-content Next app's Worker config, rendered to wrangler.jsonc (git-ignored) by
+// tooling/wire. __ENV__ is the environment it is rendered for. It needs no
+// bindings beyond its static assets.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "__WORKER__-__ENV__",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "observability": { "enabled": true },
+  // Source maps stay local: this app's exceed the 60 MiB Cloudflare accepts
+  // per Worker (error 10021).
+  "upload_source_maps": false,
+  // esbuild's keep-names helper (__name) ends up inside scripts Next
+  // serializes into the page, such as the theme script, where the browser
+  // has no __name ("ReferenceError: __name is not defined").
+  "keep_names": false,
+}

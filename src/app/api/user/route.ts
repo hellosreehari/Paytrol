@@ -28,6 +28,7 @@ export async function GET() {
         lastFuelPrice: 105.0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        hasCompletedSetup: uid === 'demo-user',
       };
       await createDocument('users', user);
     }
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
         currency: body.currency ?? existing.currency ?? 'INR',
         lastFuelPrice: Number(body.lastFuelPrice) || existing.lastFuelPrice || 105.0,
         updatedAt: new Date().toISOString(),
+        hasCompletedSetup: true,
       };
       const result = await updateDocument('users', updated);
       return NextResponse.json({ success: true, data: result });
@@ -81,6 +83,7 @@ export async function POST(req: NextRequest) {
         lastFuelPrice: Number(body.lastFuelPrice) || 105.0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        hasCompletedSetup: true,
       };
       const result = await createDocument('users', newUser);
       return NextResponse.json({ success: true, data: result });

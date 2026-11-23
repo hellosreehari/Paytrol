@@ -1,0 +1,28 @@
+// The app's Worker config, rendered to wrangler.jsonc (git-ignored) by
+// tooling/wire: from wiring.fixture.json for local runs and verify lanes, and
+// from the infra roots' wiring documents in deploy lanes. __ENV__ is the
+// environment the file is rendered for (stage, prod).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "__WORKER__-__ENV__",
+  "main": "__MAIN__",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": "__ASSETS_DIR__",
+    "binding": "ASSETS",
+    "not_found_handling": "__NOT_FOUND__",
+  },
+  "observability": { "enabled": true },
+  // Source maps stay local: a large app's exceed the 60 MiB Cloudflare
+  // accepts per Worker (error 10021).
+  "upload_source_maps": false,
+  // esbuild's keep-names helper (__name) breaks functions a framework
+  // serializes into the page ("ReferenceError: __name is not defined").
+  "keep_names": false,
+  // Non-secret runtime settings, per environment. Secrets are Worker secrets
+  // the workers-app composition writes after each deploy (workerSecrets).
+  "vars": {
+    "LOG_DEPLOYMENT_ENVIRONMENT": "__ENV__",
+  },
+}

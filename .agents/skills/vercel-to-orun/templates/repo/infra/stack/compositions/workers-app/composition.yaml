@@ -1,0 +1,32 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: Composition
+metadata:
+  name: workers-app
+spec:
+  type: workers-app
+  description: >-
+    Repo-local copy of stack-tectonic's cloudflare-workers-assets-turbo for an
+    app ported from Vercel: build, dry-run, deploy, write the Worker's secrets
+    (worker-secrets step), smoke. One Worker + static assets per environment.
+
+  schemaRef:
+    name: workers-app-component
+
+  defaultJob: verify-deploy
+  defaultProfile: verify
+
+  jobs:
+    - name: verify-deploy
+      templateRef:
+        name: workers-app-verify-deploy
+
+  profiles:
+    - name: pull-request
+      profileRef:
+        name: workers-app-pull-request
+    - name: verify
+      profileRef:
+        name: workers-app-verify
+    - name: deploy
+      profileRef:
+        name: workers-app-deploy

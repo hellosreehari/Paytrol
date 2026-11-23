@@ -1,0 +1,4 @@
+# Worker secrets for local Workers runs (pnpm preview:worker, wrangler dev).
+# Copy to .dev.vars (git-ignored). Generate values with: openssl rand -base64 48
+# One line per secret the app reads at runtime, for example:
+# SESSION_SECRET=

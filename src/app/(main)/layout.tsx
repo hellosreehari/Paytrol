@@ -36,7 +36,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] text-slate-900 flex flex-col justify-between">
-    <main className="flex-1 max-w-md w-full mx-auto px-5 pt-5 pb-28">
+      <main className="flex-1 max-w-md w-full mx-auto px-5 pt-5 pb-36">
         {children}
       </main>
       <BottomNav />

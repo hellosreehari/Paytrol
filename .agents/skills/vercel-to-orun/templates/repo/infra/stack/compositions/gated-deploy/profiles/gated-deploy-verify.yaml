@@ -1,0 +1,13 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: ExecutionProfile
+metadata:
+  name: gated-deploy-verify
+spec:
+  description: Non-mutating presence check
+  jobs:
+    deploy:
+      includeCapabilities:
+        - gated-deploy.setup-node
+        - gated-deploy.setup-pnpm
+        - gated-deploy.install
+        - gated-deploy.verify

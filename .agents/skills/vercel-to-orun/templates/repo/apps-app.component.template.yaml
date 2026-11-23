@@ -1,0 +1,56 @@
+# An app under apps/<name> (or demos/<name>, packages/<name>) in a Vercel
+# monorepo. Put this file at that path as component.yaml and add its parent
+# folder to discovery.roots in intent.yaml. It owns its own directory under
+# `orun plan --changed`; list shared code it imports in change.inputs.
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: __APP__
+  description: __APP__ (Vercel project __VERCEL_PROJECT__) on Cloudflare Workers + Static Assets
+spec:
+  type: workers-app
+  lifecycle: production
+  owner: platform
+  domain: app
+  lane: isolated
+  change:
+    inputs:
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tooling/**"
+      - "infra/stack/compositions/workers-app/**"
+  parameters:
+    nodeVersion: "22"
+    pnpmVersion: "__PNPM_VERSION__"
+    workspaceDir: ../..
+    appDir: .
+    wranglerConfig: wrangler.jsonc
+    workerEntrypoint: .open-next/worker.js
+    assetsDir: .open-next/assets
+    workerName: __PROJECT__-__APP__
+    environmentAwareWorkerName: true
+    workersDevSubdomain: __SUBDOMAIN__
+    environmentBuildVar: ORUN_ENVIRONMENT
+    installCommand: pnpm install --frozen-lockfile
+    buildCommand: 'node ../../tooling/wire/render.mjs --template wrangler.template.jsonc --out wrangler.jsonc --map ../../wiring.fixture.json --env "${ORUN_ENVIRONMENT}" && pnpm build:worker'
+    workerSecrets: ""
+    smokeCommand: 'html=$(curl -sfL --max-time 30 "${DEPLOYED_URL}/") && grep -qi "__SMOKE_TEXT__" <<< "${html}"'
+  env:
+    NODE_OPTIONS: --max-old-space-size=6144
+    NEXT_TELEMETRY_DISABLED: "1"
+  subscribe:
+    environments:
+      - name: stage
+        profile: verify
+        profileRules:
+          - profile: deploy
+            when:
+              triggerRef: github-push-main
+      - name: prod
+        profile: verify
+        profileRules:
+          - profile: deploy
+            when:
+              triggerRef: github-push-main

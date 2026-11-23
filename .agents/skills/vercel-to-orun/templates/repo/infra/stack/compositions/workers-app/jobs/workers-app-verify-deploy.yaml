@@ -1,0 +1,203 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: JobTemplate
+metadata:
+  name: workers-app-verify-deploy
+spec:
+  description: Build, verify and deploy a Worker + static assets, write its secrets, smoke it
+  runsOn: ubuntu-22.04
+  timeout: 30m
+  retries: 0
+
+  labels:
+    scope: delivery
+
+  capabilities:
+    - workers-app.setup-node
+    - workers-app.setup-pnpm
+    - workers-app.install
+    - workers-app.verify-structure
+    - workers-app.build
+    - workers-app.verify-output
+    - workers-app.deploy-dry-run
+    - workers-app.deploy
+    - workers-app.worker-secrets
+    - workers-app.smoke
+
+  steps:
+    - id: setup-node
+      name: setup-node
+      capability: workers-app.setup-node
+      use: actions/setup-node@v6
+      with:
+        node-version: "{{ .parameters.nodeVersion }}"
+
+    - id: setup-pnpm
+      name: setup-pnpm
+      capability: workers-app.setup-pnpm
+      use: pnpm/action-setup@v4
+      with:
+        version: "{{ .parameters.pnpmVersion }}"
+
+    # One install per lane (`scope: lane`, orun 2.78.2+): it runs once at the
+    # workspace root and the lane's other jobs reuse it. An older orun runs it
+    # per job.
+    - id: install-workspace-dependencies
+      name: install-workspace-dependencies
+      capability: workers-app.install
+      scope: lane
+      shell: bash
+      working-directory: "{{ .parameters.workspaceDir }}"
+      run: "{{ .parameters.installCommand }}"
+      onFailure: stop
+
+    - id: verify-app-structure
+      name: verify-app-structure
+      capability: workers-app.verify-structure
+      shell: bash
+      # The workspace manifest sits at workspaceDir (the demo app has none of
+      # its own), and the Worker config is rendered from its committed
+      # template by the build step.
+      run: |
+        test -f "{{ .parameters.workspaceDir }}/package.json"
+        test -f wrangler.template.jsonc
+      onFailure: stop
+
+    - id: build-app
+      name: build-app
+      capability: workers-app.build
+      shell: bash
+      run: |
+        {{- if .parameters.environmentBuildVar }}
+        export {{ .parameters.environmentBuildVar }}="{{ .orun.environment.name }}"
+        {{- end }}
+        {{ .parameters.buildCommand }}
+      onFailure: stop
+
+    - id: verify-build-output
+      name: verify-build-output
+      capability: workers-app.verify-output
+      shell: bash
+      run: |
+        test -f "{{ .parameters.workerEntrypoint }}"
+        test -d "{{ .parameters.assetsDir }}"
+        # Size sanity: Cloudflare's limit is 64 MiB uncompressed (wrangler's
+        # Total Upload); the dry run below prints it.
+        ls -lh "{{ .parameters.workerEntrypoint }}"
+      onFailure: stop
+
+    - id: deploy-dry-run
+      name: deploy-dry-run
+      capability: workers-app.deploy-dry-run
+      shell: bash
+      run: |
+        {{- if .parameters.environmentAwareWorkerName }}
+        EFFECTIVE_WORKER_NAME="{{ .parameters.workerName }}-{{ .orun.environment.name }}"
+        {{- else }}
+        EFFECTIVE_WORKER_NAME="{{ .parameters.workerName }}"
+        {{- end }}
+        pnpm exec wrangler deploy --dry-run \
+          --config "{{ .parameters.wranglerConfig }}" \
+          --name "${EFFECTIVE_WORKER_NAME}"
+      onFailure: stop
+
+    - id: deploy
+      name: deploy
+      capability: workers-app.deploy
+      shell: bash
+      run: |
+        : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID is required}"
+        : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN is required}"
+
+        {{- if .parameters.environmentAwareWorkerName }}
+        EFFECTIVE_WORKER_NAME="{{ .parameters.workerName }}-{{ .orun.environment.name }}"
+        {{- else }}
+        EFFECTIVE_WORKER_NAME="{{ .parameters.workerName }}"
+        {{- end }}
+
+        # Same first-deploy race as cloudflare-worker-turbo (Cloudflare code
+        # 10007 right after the upload); the deploy is idempotent, so retry.
+        attempts=3
+        for i in $(seq 1 "$attempts"); do
+          if pnpm exec wrangler deploy \
+            --config "{{ .parameters.wranglerConfig }}" \
+            --name "${EFFECTIVE_WORKER_NAME}"; then
+            [ "$i" -gt 1 ] && echo "deploy passed on attempt $i/$attempts"
+            exit 0
+          fi
+          if [ "$i" -lt "$attempts" ]; then
+            wait=$(( i * 10 ))
+            echo "deploy attempt $i/$attempts failed, retrying in ${wait}s"
+            sleep "$wait"
+          fi
+        done
+        echo "deploy failed after $attempts attempts"
+        exit 1
+      onFailure: stop
+
+    # Writes the component's workerSecrets (names of env vars resolved from Orun
+    # secrets) into the deployed Worker before the smoke check: JSON on stdin to
+    # `wrangler secret bulk`, never arguments, never printed. Orun's materialize
+    # cannot do it here, because CI brokers the token into each job.
+    - id: worker-secrets
+      name: worker-secrets
+      capability: workers-app.worker-secrets
+      shell: bash
+      run: |
+        set -euo pipefail
+        : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID is required}"
+        : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN is required}"
+        {{- if .parameters.environmentAwareWorkerName }}
+        EFFECTIVE_WORKER_NAME="{{ .parameters.workerName }}-{{ .orun.environment.name }}"
+        {{- else }}
+        EFFECTIVE_WORKER_NAME="{{ .parameters.workerName }}"
+        {{- end }}
+        {{- if .parameters.workerSecrets }}
+        node -e '
+          const out = {};
+          for (const key of process.argv.slice(1)) {
+            if (!process.env[key]) { console.error("worker-secrets: " + key + " is not set"); process.exit(1); }
+            out[key] = process.env[key];
+          }
+          process.stdout.write(JSON.stringify(out));
+        ' {{ .parameters.workerSecrets }} | pnpm exec wrangler secret bulk --name "${EFFECTIVE_WORKER_NAME}"
+        {{- else }}
+        echo "worker-secrets: none declared for this component"
+        {{- end }}
+      onFailure: stop
+
+    - id: smoke
+      name: smoke
+      capability: workers-app.smoke
+      shell: bash
+      run: |
+        set -uo pipefail
+        export ORUN_ENVIRONMENT="{{ .orun.environment.name }}"
+        {{- if .parameters.environmentAwareWorkerName }}
+        export EFFECTIVE_WORKER_NAME="{{ .parameters.workerName }}-{{ .orun.environment.name }}"
+        {{- else }}
+        export EFFECTIVE_WORKER_NAME="{{ .parameters.workerName }}"
+        {{- end }}
+        {{- if .parameters.workersDevSubdomain }}
+        export WORKERS_DEV_SUBDOMAIN="{{ .parameters.workersDevSubdomain }}"
+        export DEPLOYED_URL="https://${EFFECTIVE_WORKER_NAME}.${WORKERS_DEV_SUBDOMAIN}.workers.dev"
+        {{- end }}
+        # smokeCommand retries with backoff (about 4.5 min): a new workers.dev
+        # route can take minutes to resolve on a first deploy.
+        smoke() {
+          {{ .parameters.smokeCommand }}
+        }
+        attempts=10
+        for i in $(seq 1 "$attempts"); do
+          if smoke; then
+            [ "$i" -gt 1 ] && echo "smoke passed on attempt $i/$attempts"
+            exit 0
+          fi
+          if [ "$i" -lt "$attempts" ]; then
+            wait=$(( i * 6 )); [ "$wait" -gt 45 ] && wait=45
+            echo "smoke attempt $i/$attempts failed, retrying in ${wait}s"
+            sleep "$wait"
+          fi
+        done
+        echo "smoke failed after $attempts attempts (~4.5m budget)"
+        exit 1
+      onFailure: stop

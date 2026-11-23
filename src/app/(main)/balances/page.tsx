@@ -221,23 +221,44 @@ export default function BalancesPage() {
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center gap-4">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedFriendUid((current) =>
-                          current === bal.friendUid ? null : bal.friendUid
-                        )
-                      }
-                      className="text-xs font-semibold text-[#315e52] hover:text-[#244a40]"
-                    >
-                      {expandedFriendUid === bal.friendUid ? 'Hide split' : 'View split'}
-                    </button>
+                  <div className="pt-2.5 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedFriendUid((current) =>
+                            current === bal.friendUid ? null : bal.friendUid
+                          )
+                        }
+                        className="text-xs font-semibold text-[#315e52] hover:text-[#244a40]"
+                      >
+                        {expandedFriendUid === bal.friendUid ? 'Hide split' : 'View split'}
+                      </button>
+
+                      {isOwed ? (
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(`Hey ${bal.friendName}, you owe ${formatCurrency(absAmount)} for our recent fuel split on Paytrol. Please settle when possible!`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+                        >
+                          <span>💬 Remind</span>
+                        </a>
+                      ) : (
+                        <a
+                          href={`upi://pay?pn=${encodeURIComponent(bal.friendName)}&am=${absAmount.toFixed(2)}&cu=INR&tn=Paytrol%20Settlement`}
+                          className="text-xs font-semibold text-indigo-700 hover:text-indigo-800 flex items-center gap-1"
+                        >
+                          <span>⚡ Pay via UPI</span>
+                        </a>
+                      )}
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => handleSettle(bal.odataId)}
                       disabled={settlingId === bal.odataId}
-                      className="text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-50"
+                      className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors disabled:opacity-50"
                     >
                       {settlingId === bal.odataId ? 'Saving…' : 'Mark settled'}
                     </button>

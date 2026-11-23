@@ -360,7 +360,7 @@ export default function HistoryPage() {
 
       {editingTrip && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/30 px-4 pb-24 sm:items-center sm:pb-0"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-trip-title"
@@ -370,14 +370,14 @@ export default function HistoryPage() {
         >
           <form
             onSubmit={saveEdit}
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-xl"
+            className="flex flex-col max-h-[85vh] w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden"
           >
-            <div className="mb-4 flex items-start justify-between">
+            <div className="flex items-start justify-between p-5 pb-3 border-b border-slate-100">
               <div>
                 <h2 id="edit-trip-title" className="text-base font-bold text-slate-900">
                   Edit trip
                 </h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-0.5 text-xs text-slate-500">
                   Updating this trip recalculates its split and balance.
                 </p>
               </div>
@@ -385,150 +385,152 @@ export default function HistoryPage() {
                 type="button"
                 onClick={closeEdit}
                 disabled={savingEdit}
-                className="text-xl leading-none text-slate-400 hover:text-slate-700"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors text-xl leading-none"
                 aria-label="Close"
               >
                 ×
               </button>
             </div>
 
-            {editError && (
-              <p role="alert" className="mb-3 text-xs text-red-600">
-                {editError}
-              </p>
-            )}
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+              {editError && (
+                <p role="alert" className="text-xs text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                  {editError}
+                </p>
+              )}
 
-            <div className="space-y-3">
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Distance driven (km)</span>
-                <input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  required
-                  value={distanceDraft}
-                  onChange={(event) => setDistanceDraft(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Mileage (km/L)</span>
-                <input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  required
-                  value={mileageDraft}
-                  onChange={(event) => setMileageDraft(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Fuel price (₹/L)</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="0.1"
-                  required
-                  value={fuelPriceDraft}
-                  onChange={(event) => setFuelPriceDraft(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
-                />
-              </label>
-            </div>
-
-            <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700">People in this split</span>
-                <span className="text-[11px] text-slate-500">
-                  {(includeCreatorDraft ? 1 : 0) + selectedParticipantIds.length} people
-                </span>
+              <div className="space-y-3">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Distance driven (km)</span>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    required
+                    value={distanceDraft}
+                    onChange={(event) => setDistanceDraft(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Mileage (km/L)</span>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    required
+                    value={mileageDraft}
+                    onChange={(event) => setMileageDraft(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Fuel price (₹/L)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.1"
+                    required
+                    value={fuelPriceDraft}
+                    onChange={(event) => setFuelPriceDraft(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </label>
               </div>
 
-              <button
-                type="button"
-                role="switch"
-                aria-checked={includeCreatorDraft}
-                onClick={() => setIncludeCreatorDraft((current) => !current)}
-                className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5"
-              >
-                <span className="text-xs font-medium text-slate-800">Include me</span>
-                <span
-                  className={includeCreatorDraft
-                    ? 'h-5 w-9 rounded-full bg-[#315e52] p-0.5'
-                    : 'h-5 w-9 rounded-full bg-slate-300 p-0.5'}
-                >
-                  <span
-                    className={includeCreatorDraft
-                      ? 'block h-4 w-4 translate-x-4 rounded-full bg-white'
-                      : 'block h-4 w-4 rounded-full bg-white'}
-                  />
-                </span>
-              </button>
+              <div className="space-y-3 border-t border-slate-200 pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-700">People in this split</span>
+                  <span className="text-[11px] text-slate-500">
+                    {(includeCreatorDraft ? 1 : 0) + selectedParticipantIds.length} people
+                  </span>
+                </div>
 
-              {friends.map((friend) => {
-                const friendUid =
-                  friend.fromUid === currentUserId ? friend.toUid : friend.fromUid;
-                const friendName =
-                  friend.fromUid === currentUserId ? friend.toName : friend.fromName;
-                if (!friendUid) return null;
-                const key = `friend:${friendUid}`;
-                const selected = selectedParticipantIds.includes(key);
-                return (
-                  <button
-                    type="button"
-                    key={friend.id}
-                    onClick={() => toggleParticipant(key)}
-                    aria-pressed={selected}
-                    className={selected
-                      ? 'flex w-full items-center justify-between rounded-xl border border-slate-300 bg-[#edf2ed] px-3 py-2.5'
-                      : 'flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5'}
-                  >
-                    <span className="text-xs font-medium text-slate-800">{friendName}</span>
-                    <span className="text-xs text-slate-500">{selected ? 'Added' : 'Add'}</span>
-                  </button>
-                );
-              })}
-
-              {guestContacts.map((guest) => {
-                const key = `guest:${guest.id}`;
-                const selected = selectedParticipantIds.includes(key);
-                return (
-                  <button
-                    type="button"
-                    key={guest.id}
-                    onClick={() => toggleParticipant(key)}
-                    aria-pressed={selected}
-                    className={selected
-                      ? 'flex w-full items-center justify-between rounded-xl border border-slate-300 bg-[#edf2ed] px-3 py-2.5'
-                      : 'flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5'}
-                  >
-                    <span className="text-xs font-medium text-slate-800">{guest.name}</span>
-                    <span className="text-xs text-slate-500">{selected ? 'Added' : 'Add'}</span>
-                  </button>
-                );
-              })}
-
-              <div className="flex gap-2">
-                <input
-                  value={quickGuestName}
-                  onChange={(event) => setQuickGuestName(event.target.value)}
-                  maxLength={80}
-                  placeholder="Add a guest"
-                  className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 outline-none focus:border-slate-400"
-                />
                 <button
                   type="button"
-                  onClick={addQuickGuest}
-                  disabled={!quickGuestName.trim() || addingGuest}
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-[#315e52] disabled:opacity-50"
+                  role="switch"
+                  aria-checked={includeCreatorDraft}
+                  onClick={() => setIncludeCreatorDraft((current) => !current)}
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5"
                 >
-                  {addingGuest ? 'Adding…' : 'Add'}
+                  <span className="text-xs font-medium text-slate-800">Include me</span>
+                  <span
+                    className={includeCreatorDraft
+                      ? 'h-5 w-9 rounded-full bg-[#315e52] p-0.5'
+                      : 'h-5 w-9 rounded-full bg-slate-300 p-0.5'}
+                  >
+                    <span
+                      className={includeCreatorDraft
+                        ? 'block h-4 w-4 translate-x-4 rounded-full bg-white'
+                        : 'block h-4 w-4 rounded-full bg-white'}
+                    />
+                  </span>
                 </button>
+
+                {friends.map((friend) => {
+                  const friendUid =
+                    friend.fromUid === currentUserId ? friend.toUid : friend.fromUid;
+                  const friendName =
+                    friend.fromUid === currentUserId ? friend.toName : friend.fromName;
+                  if (!friendUid) return null;
+                  const key = `friend:${friendUid}`;
+                  const selected = selectedParticipantIds.includes(key);
+                  return (
+                    <button
+                      type="button"
+                      key={friend.id}
+                      onClick={() => toggleParticipant(key)}
+                      aria-pressed={selected}
+                      className={selected
+                        ? 'flex w-full items-center justify-between rounded-xl border border-slate-300 bg-[#edf2ed] px-3 py-2.5'
+                        : 'flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5'}
+                    >
+                      <span className="text-xs font-medium text-slate-800">{friendName}</span>
+                      <span className="text-xs text-slate-500">{selected ? 'Added' : 'Add'}</span>
+                    </button>
+                  );
+                })}
+
+                {guestContacts.map((guest) => {
+                  const key = `guest:${guest.id}`;
+                  const selected = selectedParticipantIds.includes(key);
+                  return (
+                    <button
+                      type="button"
+                      key={guest.id}
+                      onClick={() => toggleParticipant(key)}
+                      aria-pressed={selected}
+                      className={selected
+                        ? 'flex w-full items-center justify-between rounded-xl border border-slate-300 bg-[#edf2ed] px-3 py-2.5'
+                        : 'flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5'}
+                    >
+                      <span className="text-xs font-medium text-slate-800">{guest.name}</span>
+                      <span className="text-xs text-slate-500">{selected ? 'Added' : 'Add'}</span>
+                    </button>
+                  );
+                })}
+
+                <div className="flex gap-2">
+                  <input
+                    value={quickGuestName}
+                    onChange={(event) => setQuickGuestName(event.target.value)}
+                    maxLength={80}
+                    placeholder="Add a guest"
+                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={addQuickGuest}
+                    disabled={!quickGuestName.trim() || addingGuest}
+                    className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-[#315e52] disabled:opacity-50"
+                  >
+                    {addingGuest ? 'Adding…' : 'Add'}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="mt-5 flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 p-4 border-t border-slate-100 bg-slate-50/80">
               {confirmDeleteTrip ? (
                 <div className="flex items-center gap-2">
                   <button
@@ -557,22 +559,22 @@ export default function HistoryPage() {
                   Delete trip
                 </button>
               )}
-              <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={closeEdit}
-                disabled={savingEdit}
-                className="px-3 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingEdit}
-                className="rounded-xl bg-[#315e52] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#244a40] disabled:opacity-50"
-              >
-                {savingEdit ? 'Saving…' : 'Save changes'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  disabled={savingEdit}
+                  className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="rounded-xl bg-[#315e52] px-4 py-2 text-xs font-semibold text-white hover:bg-[#244a40] disabled:opacity-50"
+                >
+                  {savingEdit ? 'Saving…' : 'Save changes'}
+                </button>
               </div>
             </div>
           </form>

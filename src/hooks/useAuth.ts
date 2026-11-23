@@ -71,7 +71,7 @@ export function useAuth() {
     profile,
     isAuthenticated,
     isLoading: isLoading || loading,
-    needsSetup: isAuthenticated && (!profile || !profile.lastFuelPrice),
+    needsSetup: isAuthenticated && profile !== null && profile.hasCompletedSetup === false && profile.id !== 'demo-user',
     signInGoogle: handleSignInGoogle,
     signInDemo: handleSignInDemo,
     signOut: handleSignOut,

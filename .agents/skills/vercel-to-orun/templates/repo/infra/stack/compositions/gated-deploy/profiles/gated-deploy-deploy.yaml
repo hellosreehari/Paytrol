@@ -1,0 +1,16 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: ExecutionProfile
+metadata:
+  name: gated-deploy-deploy
+spec:
+  description: Deploy when the gate secret is stored
+  policies:
+    requireCleanGitTree: true
+  jobs:
+    deploy:
+      includeCapabilities:
+        - gated-deploy.setup-node
+        - gated-deploy.setup-pnpm
+        - gated-deploy.install
+        - gated-deploy.verify
+        - gated-deploy.deploy

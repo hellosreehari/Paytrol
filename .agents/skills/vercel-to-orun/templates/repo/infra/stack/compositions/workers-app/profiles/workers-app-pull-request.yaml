@@ -1,0 +1,16 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: ExecutionProfile
+metadata:
+  name: workers-app-pull-request
+spec:
+  description: Fast PR validation for a Cloudflare Workers + Static Assets package
+
+  jobs:
+    verify-deploy:
+      includeCapabilities:
+        - workers-app.setup-node
+        - workers-app.setup-pnpm
+        - workers-app.install
+        - workers-app.verify-structure
+        - workers-app.build
+        - workers-app.verify-output

@@ -1,0 +1,46 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: ComponentSchema
+metadata:
+  name: gated-deploy-component
+spec:
+  type: gated-deploy
+  schema:
+    $schema: http://json-schema.org/draft-07/schema#
+    title: Gated external deploy
+    type: object
+    required:
+      - name
+      - type
+      - parameters
+    properties:
+      name:
+        type: string
+      type:
+        type: string
+        const: gated-deploy
+      parameters:
+        type: object
+        # orun renders parameters without schema defaults: set every one on
+        # the component, or the step renders "<no value>".
+        required:
+          - nodeVersion
+          - pnpmVersion
+          - installCommand
+          - verifyCommand
+          - deployCommand
+          - gateSecret
+        properties:
+          nodeVersion: { type: string }
+          pnpmVersion: { type: string }
+          installCommand: { type: string }
+          verifyCommand:
+            type: string
+            description: Non-mutating check run on every plan (e.g. the backend CLI's --version)
+          deployCommand:
+            type: string
+            description: The backend's own deploy command
+          gateSecret:
+            type: string
+            description: Env var (from optionalSecretEnv) that must be set for the deploy to run
+        additionalProperties: true
+    additionalProperties: true

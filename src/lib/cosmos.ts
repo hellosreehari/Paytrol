@@ -52,6 +52,7 @@ function ensureSeedData() {
   const balancesMap = memoryStore.balances;
   if (balancesMap.size === 0) {
     balancesMap.set('demo-user_rahul-uid', {
+      id: 'demo-user_rahul-uid',
       odataId: 'demo-user_rahul-uid',
       uid1: 'demo-user',
       uid2: 'rahul-uid',
@@ -102,10 +103,15 @@ async function getContainer(containerId: string): Promise<Container> {
 // ── Generic CRUD with Azure Cosmos DB & in-memory fallback ──
 
 export async function createDocument<T extends { id: string }>(containerId: string, doc: T): Promise<T> {
+  const docId = doc.id || ((doc as Record<string, unknown>).odataId as string);
+  if (!doc.id && docId) {
+    doc.id = docId;
+  }
+
   if (!hasAzureCosmosConfig()) {
     ensureSeedData();
     if (!memoryStore[containerId]) memoryStore[containerId] = new Map();
-    memoryStore[containerId].set(doc.id, JSON.parse(JSON.stringify(doc)));
+    memoryStore[containerId].set(docId, JSON.parse(JSON.stringify(doc)));
     return doc;
   }
 
@@ -134,15 +140,20 @@ export async function getDocument<T>(containerId: string, id: string): Promise<T
 }
 
 export async function updateDocument<T extends { id: string }>(containerId: string, doc: T): Promise<T> {
+  const docId = doc.id || ((doc as Record<string, unknown>).odataId as string);
+  if (!doc.id && docId) {
+    doc.id = docId;
+  }
+
   if (!hasAzureCosmosConfig()) {
     ensureSeedData();
     if (!memoryStore[containerId]) memoryStore[containerId] = new Map();
-    memoryStore[containerId].set(doc.id, JSON.parse(JSON.stringify(doc)));
+    memoryStore[containerId].set(docId, JSON.parse(JSON.stringify(doc)));
     return doc;
   }
 
   const container = await getContainer(containerId);
-  const { resource } = await container.item(doc.id, doc.id).replace(doc as unknown as Record<string, unknown>);
+  const { resource } = await container.item(docId, docId).replace(doc as unknown as Record<string, unknown>);
   return resource as unknown as T;
 }
 

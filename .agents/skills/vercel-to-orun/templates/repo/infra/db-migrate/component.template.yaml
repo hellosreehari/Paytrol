@@ -1,0 +1,55 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: db-migrate
+  description: Applies database migrations to stage and prod Supabase instances
+  labels:
+    domain: infra
+    scope: database
+    team: platform
+    layer: data
+
+spec:
+  type: db-migrate
+  lifecycle: production
+  owner: platform
+  domain: infra
+
+  dependsOn:
+    - component: db
+    # Migrations read the Supabase connection from the orun secrets the
+    # `supabase` component lease-publishes post-apply.
+    - component: supabase
+
+  path: packages/db/src/migrations
+
+  parameters:
+    nodeVersion: "22"
+    pnpmVersion: "__PNPM_VERSION__"
+    owner: __OWNER__
+    repo: __PROJECT__
+
+  # The runner's Management-API token (required in apply mode), minted per run
+  # from the Supabase integration's management-access template.
+  secretEnv:
+    SUPABASE_ACCESS_TOKEN: "secret://__WS__/__PROJECT__/{{ .environment }}/SUPABASE_ACCESS_TOKEN"
+    # The runner's database identity.
+    SUPABASE_PROJECT_REF: "secret://__WS__/__PROJECT__/{{ .environment }}/SUPABASE_PROJECT_REF"
+    SUPABASE_DB_PASSWORD: "secret://__WS__/__PROJECT__/{{ .environment }}/SUPABASE_DB_PASSWORD"
+    SUPABASE_DB_URL: "secret://__WS__/__PROJECT__/{{ .environment }}/SUPABASE_DB_URL"
+
+  subscribe:
+    environments:
+      - name: stage
+        profile: plan
+        profileRules:
+          - profile: apply
+            when:
+              triggerRef: github-push-main
+
+      - name: prod
+        profile: plan
+        profileRules:
+          - profile: apply
+            when:
+              triggerRef: github-push-main

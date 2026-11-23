@@ -1,0 +1,66 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: JobTemplate
+metadata:
+  name: gated-deploy-run
+spec:
+  description: Verify and deploy an external backend once its deploy secret is stored
+  runsOn: ubuntu-22.04
+  timeout: 20m
+  retries: 0
+
+  labels:
+    scope: backend
+
+  capabilities:
+    - gated-deploy.setup-node
+    - gated-deploy.setup-pnpm
+    - gated-deploy.install
+    - gated-deploy.verify
+    - gated-deploy.deploy
+
+  steps:
+    - id: setup-node
+      name: setup-node
+      capability: gated-deploy.setup-node
+      use: actions/setup-node@v6
+      with:
+        node-version: "{{ .parameters.nodeVersion }}"
+
+    - id: setup-pnpm
+      name: setup-pnpm
+      capability: gated-deploy.setup-pnpm
+      use: pnpm/action-setup@v4
+      with:
+        version: "{{ .parameters.pnpmVersion }}"
+
+    - id: install-workspace-dependencies
+      name: install-workspace-dependencies
+      capability: gated-deploy.install
+      scope: lane
+      shell: bash
+      run: "{{ .parameters.installCommand }}"
+      onFailure: stop
+
+    - id: verify
+      name: verify
+      capability: gated-deploy.verify
+      shell: bash
+      run: |
+        set -euo pipefail
+        {{ .parameters.verifyCommand }}
+      onFailure: stop
+
+    - id: deploy
+      name: deploy
+      capability: gated-deploy.deploy
+      shell: bash
+      run: |
+        set -euo pipefail
+        gate="{{ .parameters.gateSecret }}"
+        if [ -z "${!gate:-}" ]; then
+          echo "{{ .parameters.gateSecret }} is not stored for {{ .orun.environment.name }}; the deploy is skipped."
+          echo "Store it to turn the deploy on: orun secrets set {{ .parameters.gateSecret }} --env {{ .orun.environment.name }} (reads stdin)."
+          exit 0
+        fi
+        {{ .parameters.deployCommand }}
+      onFailure: stop

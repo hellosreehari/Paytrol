@@ -9,6 +9,7 @@ export interface UserProfile {
   lastFuelPrice: number;   // e.g. 105.00
   createdAt: string;       // ISO date
   updatedAt: string;
+  hasCompletedSetup?: boolean;
 }
 
 // AI extraction result from dashboard photo

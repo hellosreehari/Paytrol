@@ -1,0 +1,30 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: Composition
+metadata:
+  name: gated-deploy
+spec:
+  type: gated-deploy
+  description: >-
+    Deploys a backend the app keeps outside Cloudflare (hosted functions,
+    an external database's migrations, ...) with a command, only once the
+    secret that authorizes it is stored. Verify runs a cheap presence check;
+    deploy runs the command, or says it skipped when the secret is missing.
+
+  schemaRef:
+    name: gated-deploy-component
+
+  defaultJob: deploy
+  defaultProfile: verify
+
+  jobs:
+    - name: deploy
+      templateRef:
+        name: gated-deploy-run
+
+  profiles:
+    - name: verify
+      profileRef:
+        name: gated-deploy-verify
+    - name: deploy
+      profileRef:
+        name: gated-deploy-deploy

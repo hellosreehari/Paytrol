@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "orunbase": {
+      "type": "http",
+      "url": "https://mcp-worker-prod.oruncloud.workers.dev/mcp"
+    }
+  }
+}

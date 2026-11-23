@@ -1,0 +1,33 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: ExecutionProfile
+metadata:
+  name: workers-app-deploy
+spec:
+  description: Build, deploy, write the Worker's secrets, smoke
+
+  policies:
+    requireApproval: true
+    requireCleanGitTree: true
+
+  # The deploy step talks to the Cloudflare API (wrangler deploy): declare the
+  # credential as an orun secret binding so the runner resolves + injects it at
+  # run time. Verify/pull-request profiles carry no bindings.
+  secretBindings:
+    CLOUDFLARE_API_TOKEN: { required: true }
+    # The account id is a non-secret connection fact, brokered from the same
+    # Cloudflare integration (template: account-id), bound here so the deploy
+    # step needs no ambient CI value for it either.
+    CLOUDFLARE_ACCOUNT_ID: { required: true }
+
+  jobs:
+    verify-deploy:
+      includeCapabilities:
+        - workers-app.setup-node
+        - workers-app.setup-pnpm
+        - workers-app.install
+        - workers-app.verify-structure
+        - workers-app.build
+        - workers-app.verify-output
+        - workers-app.deploy
+        - workers-app.worker-secrets
+        - workers-app.smoke

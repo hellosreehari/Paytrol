@@ -1,0 +1,230 @@
+# Orun intent for __PROJECT__ (ported from Vercel). Placeholders:
+#   __PROJECT__     repo name (also the Orun project slug)
+#   __WS__          workspace id (ws_...)
+#   __SUBDOMAIN__   the Cloudflare account's workers.dev subdomain
+#   __STACK_TECTONIC__  stack-tectonic tag the current baselines pin (e.g. 0.20.0)
+# Delete the OPTIONAL blocks the survey did not call for.
+apiVersion: sourceplane.io/v1
+kind: Intent
+
+metadata:
+  name: __PROJECT__
+  description: __PROJECT__ on Cloudflare Workers through Orunbase (ported from Vercel).
+  namespace: __PROJECT__
+
+execution:
+  state:
+    backendUrl: https://api-edge-prod.oruncloud.workers.dev
+    # Declaring the workspace implies strict mode: a non-interactive run that
+    # resolves no workspace fails fast.
+    workspace: __WS__
+    requireOrg: true
+    autopushCatalog: true
+  lanes:
+    mode: auto
+    maxLanes: 6
+    concurrency: 6
+
+compositions:
+  sources:
+    # Pinned: bumping the tag is the deliberate upgrade step.
+    - name: stack-tectonic
+      kind: oci
+      ref: oci://ghcr.io/sourceplane/stack-tectonic:__STACK_TECTONIC__
+    # Repo-local: workers-app (Worker build/deploy/secrets/smoke) and
+    # gated-deploy (an external backend's deploy), which stack-tectonic lacks.
+    - name: local
+      kind: dir
+      path: infra/stack
+  resolution:
+    precedence:
+      - local
+      - stack-tectonic
+
+# Infra roots (and apps under apps/) are discovered by their component.yaml.
+# An app at the repository root is declared inline below instead, so the
+# upstream layout does not have to move.
+discovery:
+  roots:
+    - infra/
+    # - apps/          # OPTIONAL: monorepo apps with their own component.yaml
+
+automation:
+  triggerBindings:
+    github-pull-request:
+      description: Pull request validation
+      on:
+        provider: github
+        event: pull_request
+        actions: [opened, synchronize, reopened, ready_for_review]
+        baseBranches: [main]
+      plan:
+        scope: changed
+        base: pull_request.base.sha
+        head: pull_request.head.sha
+    github-push-main:
+      description: Main branch convergence after merge
+      on:
+        provider: github
+        event: push
+        branches: [main]
+    local-development:
+      description: Local planning
+      on:
+        provider: local
+
+environments:
+  stage:
+    description: Deployed on every merge to main, before prod. Pull requests plan and verify here.
+    url: https://__PROJECT__-web-stage.__SUBDOMAIN__.workers.dev
+    activation:
+      triggerRefs: [github-pull-request, github-push-main, local-development]
+    parameterDefaults:
+      terraform:
+        lane: verify
+        namespace: __PROJECT__
+        namespacePrefix: ""
+        owner: __OWNER__
+        repo: __PROJECT__
+    policies:
+      requireApproval: "false"
+  prod:
+    description: Where visitors are. Deploys after stage converges on the same commit.
+    url: https://__PROJECT__-web-prod.__SUBDOMAIN__.workers.dev
+    activation:
+      triggerRefs: [github-push-main, local-development]
+    promotion:
+      dependsOn:
+        - environment: stage
+    parameterDefaults:
+      terraform:
+        lane: verify
+        namespace: __PROJECT__
+        namespacePrefix: ""
+        owner: __OWNER__
+        repo: __PROJECT__
+    policies:
+      requireApproval: "false"
+
+components:
+  # The main app. Shown for an app at the repository root (path: .); for an
+  # app under apps/<name>, use templates/repo/apps-app.component.template.yaml instead
+  # and drop this block.
+  - name: web
+    type: workers-app
+    domain: app          # not the component's own name: a domain and a component share the catalog's name space
+    path: .
+    lane: isolated
+    dependsOn:
+      - component: next-cache-kv          # OPTIONAL: Next.js with a KV cache
+      # - component: backend              # OPTIONAL: an external backend deploys first
+    # A root-path component owns no files under `orun plan --changed`: list
+    # what changes the Worker, or merges will not redeploy it.
+    change:
+      inputs:
+        - "app/**"
+        - "src/**"
+        - "pages/**"
+        - "components/**"
+        - "lib/**"
+        - "public/**"
+        - "content/**"
+        - "*.config.*"
+        - "middleware.ts"
+        - "proxy.ts"
+        - "instrumentation.ts"
+        - "worker.ts"
+        - "package.json"
+        - "pnpm-lock.yaml"
+        - "pnpm-workspace.yaml"
+        - "tsconfig.json"
+        - "wrangler.template.jsonc"
+        - "wiring.fixture.json"
+        - "open-next.config.ts"
+        - "tooling/**"
+        - "scripts/**"
+        - "infra/stack/compositions/workers-app/**"
+    parameters:
+      nodeVersion: "22"
+      pnpmVersion: "__PNPM_VERSION__"
+      workspaceDir: .
+      appDir: .
+      wranglerConfig: wrangler.jsonc
+      workerEntrypoint: .open-next/worker.js    # non-Next: see references/frameworks.md
+      assetsDir: .open-next/assets
+      workerName: __PROJECT__-web
+      environmentAwareWorkerName: true
+      workersDevSubdomain: __SUBDOMAIN__
+      environmentBuildVar: ORUN_ENVIRONMENT
+      installCommand: pnpm install --frozen-lockfile
+      # Deploy lanes hold the Cloudflare token and render binding ids from the
+      # wiring documents; verify lanes render from the fixture. Drop the
+      # render when wrangler.template.jsonc has no @@wiring tokens.
+      buildCommand: 'if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then node tooling/wire/live.mjs --template wrangler.template.jsonc --out wrangler.jsonc --components next-cache-kv --env "${ORUN_ENVIRONMENT}"; else node tooling/wire/render.mjs --template wrangler.template.jsonc --out wrangler.jsonc --map wiring.fixture.json --env "${ORUN_ENVIRONMENT}"; fi && pnpm build:worker'
+      # Space-separated Orun secrets (from secretEnv) written into the Worker
+      # after deploy and before smoke. Empty: nothing written.
+      workerSecrets: ""
+      # A here-string, not a pipe: smoke runs with pipefail and grep -q closing
+      # a pipe early fails it with SIGPIPE on pages larger than 64 KB.
+      smokeCommand: 'html=$(curl -sfL --max-time 30 "${DEPLOYED_URL}/") && grep -qi "__SMOKE_TEXT__" <<< "${html}"'
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+      NEXT_TELEMETRY_DISABLED: "1"
+    # secretEnv:                          # OPTIONAL: required runtime secrets
+    #   SOME_SECRET: "secret://__WS__/__PROJECT__/{{ .environment }}/SOME_SECRET"
+    optionalSecretEnv:
+      WIRING_NEXT_CACHE_KV_STAGE: "secret://__WS__/__PROJECT__/stage/WIRING_NEXT_CACHE_KV"
+      WIRING_NEXT_CACHE_KV_PROD: "secret://__WS__/__PROJECT__/prod/WIRING_NEXT_CACHE_KV"
+    subscribe:
+      environments:
+        - name: stage
+          profile: verify
+          env:
+            # Build-time public values per environment (NEXT_PUBLIC_*, VITE_*, PUBLIC_*).
+            NEXT_PUBLIC_SITE_URL: https://__PROJECT__-web-stage.__SUBDOMAIN__.workers.dev
+          profileRules:
+            - profile: deploy
+              when:
+                triggerRef: github-push-main
+        - name: prod
+          profile: verify
+          env:
+            NEXT_PUBLIC_SITE_URL: https://__PROJECT__-web-prod.__SUBDOMAIN__.workers.dev
+          profileRules:
+            - profile: deploy
+              when:
+                triggerRef: github-push-main
+
+  # OPTIONAL: a backend that stays outside Cloudflare and has its own deploy
+  # step. Replace <backend-dir>, <check> and <deploy> with its CLI's.
+  # - name: backend
+  #   type: gated-deploy
+  #   domain: services
+  #   path: .
+  #   change:
+  #     inputs: ["<backend-dir>/**", "package.json", "pnpm-lock.yaml"]
+  #   parameters:
+  #     nodeVersion: "22"
+  #     pnpmVersion: "__PNPM_VERSION__"
+  #     installCommand: pnpm install --frozen-lockfile
+  #     verifyCommand: <check: non-mutating, e.g. the CLI's --version>
+  #     deployCommand: <deploy>
+  #     gateSecret: BACKEND_DEPLOY_KEY
+  #   optionalSecretEnv:
+  #     BACKEND_DEPLOY_KEY: "secret://__WS__/__PROJECT__/{{ .environment }}/BACKEND_DEPLOY_KEY"
+  #   subscribe:
+  #     environments:
+  #       - name: stage
+  #         profile: verify
+  #         profileRules: [{ profile: deploy, when: { triggerRef: github-push-main } }]
+  #       - name: prod
+  #         profile: verify
+  #         profileRules: [{ profile: deploy, when: { triggerRef: github-push-main } }]
+
+repo:
+  displayName: __PROJECT__
+  docs:
+    overview: README.md
+    pages:
+      - { path: specs/epics/__PROJECT__-on-orunbase/README.md, role: reference, title: The epic }
+      - { path: specs/epics/__PROJECT__-on-orunbase/design.md, role: architecture, title: Design }

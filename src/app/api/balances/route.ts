@@ -19,30 +19,42 @@ export async function GET() {
       [{ name: '@uid', value: uid }]
     );
 
-    // Normalize from the current user's perspective:
-    // positive amount = friend owes you
-    // negative amount = you owe friend
-    const normalized = balances.map((b) => {
+    // Consolidate balances by friend to avoid duplicate cards or state collisions
+    const byFriend = new Map<string, {
+      id: string;
+      odataId: string;
+      friendUid: string;
+      friendName: string;
+      friendPhoto: string | null;
+      isGuest: boolean;
+      amount: number;
+    }>();
+
+    for (const b of balances) {
       const isUid1 = b.uid1 === uid;
       const friendUid = isUid1 ? b.uid2 : b.uid1;
       const friendName = isUid1 ? b.name2 : b.name1;
       const friendPhoto = isUid1 ? b.photo2 : b.photo1;
-      // In our trip route:
-      // uid1 created trip, uid2 owes uid1 `share`, recorded as b.netAmount = -share.
-      // So if current user is uid1: netAmount is negative, so amount = -b.netAmount (positive = they owe you).
-      // If current user is uid2: amount = b.netAmount (negative = you owe uid1).
       const amount = isUid1 ? -b.netAmount : b.netAmount;
+      const balanceId = b.id || b.odataId || [b.uid1, b.uid2].sort().join('_');
 
-      return {
-        id: b.odataId,
-        odataId: b.odataId,
-        friendUid,
-        friendName,
-        friendPhoto,
-        isGuest: b.guestUid === friendUid,
-        amount,
-      };
-    });
+      if (byFriend.has(friendUid)) {
+        const existing = byFriend.get(friendUid)!;
+        existing.amount += amount;
+      } else {
+        byFriend.set(friendUid, {
+          id: balanceId,
+          odataId: balanceId,
+          friendUid,
+          friendName,
+          friendPhoto,
+          isGuest: b.guestUid === friendUid,
+          amount,
+        });
+      }
+    }
+
+    const normalized = Array.from(byFriend.values());
 
     return NextResponse.json({ success: true, data: normalized });
   } catch (error: unknown) {

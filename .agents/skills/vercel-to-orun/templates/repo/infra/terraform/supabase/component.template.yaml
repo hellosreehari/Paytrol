@@ -1,0 +1,48 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+
+metadata:
+  name: supabase
+  description: Provisions Supabase projects for stage and prod and wires credentials into orun secrets
+  labels:
+    domain: infra
+    scope: database
+
+spec:
+  type: terraform
+  lifecycle: production
+  owner: platform
+  domain: infra
+
+  parameters:
+    orgName: __OWNER__
+    stackName: supabase
+    terraformDir: terraform
+    terraformVersion: "1.15.3"
+    # The region reaches Terraform as TF_VAR_supabaseRegion. The org id is not
+    # a parameter: it is account-specific and arrives from orun secrets.
+    supabaseRegion: ap-southeast-1
+    # Published onto the project/{{env}} secret rung after the apply.
+    secretOutputs: "SUPABASE_PROJECT_REF=project_ref,SUPABASE_DB_PASSWORD=database_password,SUPABASE_DB_URL=connection_uri,SUPABASE_URL=project_url,SUPABASE_ANON_KEY=anon_key,SUPABASE_SERVICE_ROLE_KEY=service_role_key,WIRING_SUPABASE=wiring"
+
+  # From orun secrets, brokered from the Supabase integration: a Management-API
+  # token minted per run (management-access) and the org id (org-id).
+  secretEnv:
+    SUPABASE_ACCESS_TOKEN: "secret://__WS__/__PROJECT__/{{ .environment }}/SUPABASE_ACCESS_TOKEN"
+    TF_VAR_supabaseOrgId: "secret://__WS__/__PROJECT__/{{ .environment }}/SUPABASE_ORG_ID"
+
+  subscribe:
+    environments:
+      - name: stage
+        profile: plan-only
+        profileRules:
+          - profile: apply
+            when:
+              triggerRef: github-push-main
+
+      - name: prod
+        profile: plan-only
+        profileRules:
+          - profile: apply
+            when:
+              triggerRef: github-push-main
