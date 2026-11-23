@@ -77,4 +77,6 @@ jobs:
           app-name: 'Paytrol'
           slot-name: 'Production'
           package: .
+          clean: true
+          restart: true
           startup-command: node node_modules/next/dist/bin/next start
