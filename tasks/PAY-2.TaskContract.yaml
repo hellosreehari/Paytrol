@@ -1,0 +1,21 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: PAY-2
+  title: "Run Paytrol on Workers with @opennextjs/cloudflare"
+spec:
+  goal: "Port Next.js configuration to run on Cloudflare Workers via opennextjs-cloudflare and wrangler"
+  affects:
+    - "package.json"
+    - "package-lock.json"
+    - "next.config.ts"
+    - "open-next.config.ts"
+    - "wrangler.template.jsonc"
+    - "worker.ts"
+    - "lib/cron/**"
+    - ".dev.vars.example"
+    - "specs/epics/port-paytrol-workers/IMPLEMENTATION-STATUS.md"
+  doneWhen:
+    - "Worker builds locally using opennextjs-cloudflare build"
+    - "Routes serve locally under wrangler dev"
+  gates: []

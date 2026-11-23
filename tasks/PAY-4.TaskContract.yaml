@@ -1,0 +1,13 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: PAY-4
+  title: "Deploy and verify stage and prod"
+spec:
+  goal: "Converge stage and prod Workers and verify live endpoints"
+  affects:
+    - "specs/epics/port-paytrol-workers/IMPLEMENTATION-STATUS.md"
+  doneWhen:
+    - "paytrol-web-stage and paytrol-web-prod deploy successfully"
+    - "Live endpoints answer requests on workers.dev"
+  gates: []

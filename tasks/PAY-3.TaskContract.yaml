@@ -1,0 +1,18 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: PAY-3
+  title: "Wire Orun intent and CI workflow"
+spec:
+  goal: "Stamp Orun intent, stack compositions, and CI workflow so orun plan resolves cleanly"
+  affects:
+    - "intent.yaml"
+    - "infra/**"
+    - "tooling/**"
+    - "wiring.fixture.json"
+    - ".github/workflows/orun.yml"
+    - "specs/epics/port-paytrol-workers/IMPLEMENTATION-STATUS.md"
+  doneWhen:
+    - "orun validate passes on intent.yaml"
+    - "orun plan resolves the stack composition"
+  gates: []

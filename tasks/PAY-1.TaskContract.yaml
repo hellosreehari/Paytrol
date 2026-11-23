@@ -1,0 +1,14 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: PAY-1
+  title: "Author spec doc set and initial intent"
+spec:
+  goal: "Author the epic design doc set under specs/epics/port-paytrol-workers/ and task contracts"
+  affects:
+    - "specs/epics/port-paytrol-workers/**"
+    - "tasks/**"
+  doneWhen:
+    - "The five epic documents exist in specs/epics/port-paytrol-workers/"
+    - "The task contracts exist in tasks/"
+  gates: []
