@@ -90,6 +90,17 @@ export interface Balance {
   guestUid?: string;
 }
 
+// A recorded payment that cleared (part of) a balance
+export interface Settlement {
+  id: string;
+  balanceId: string;
+  fromUid: string;   // who paid
+  toUid: string;     // who was paid
+  amount: number;
+  recordedBy: string;
+  createdAt: string;
+}
+
 // API response wrapper
 export interface ApiResponse<T> {
   success: boolean;

@@ -109,18 +109,21 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    if (existing.length > 0) {
-      const prev = existing[0];
-      if (prev.status === 'accepted') {
-        return NextResponse.json(
-          { success: false, error: 'You are already friends with this person!' },
-          { status: 400 }
-        );
-      }
+    if (existing.some((invite) => invite.status === 'accepted')) {
+      return NextResponse.json(
+        { success: false, error: 'You are already friends with this person!' },
+        { status: 400 }
+      );
+    }
+    if (existing.some((invite) => invite.status === 'pending')) {
       return NextResponse.json(
         { success: false, error: 'An invite is already pending with this person.' },
         { status: 400 }
       );
+    }
+    // A previously declined invite no longer blocks a new one.
+    for (const declined of existing.filter((invite) => invite.status === 'declined')) {
+      await deleteDocument('friendships', declined.id);
     }
 
     // Check if target user already exists in database
@@ -148,16 +151,13 @@ export async function POST(req: NextRequest) {
 
     const created = await createDocument('friendships', friendship);
 
-    // Deep link generated for invite email:
-    const inviteLink = `${process.env.NEXTAUTH_URL || 'https://paytrol.app'}/friends?invite=${created.id}`;
-    console.log(`[Invite Dispatched] Email sent to ${targetEmail} with link: ${inviteLink}`);
-
+    // No email is sent yet: the invite appears in the app when they sign in with this email.
     return NextResponse.json({
       success: true,
       data: created,
       message: targetUser
-        ? 'In-app notification and email invite dispatched!'
-        : 'Invite email sent with deep link! Will auto-link once friend signs in.',
+        ? 'Invite sent. They’ll see it in Paytrol under Received.'
+        : 'Invite saved. It will appear when they sign in to Paytrol with this email.',
     });
   } catch (error: unknown) {
     console.error('Friends POST error:', error);

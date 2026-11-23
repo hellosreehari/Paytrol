@@ -33,3 +33,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// Vercel Cron and most schedulers call the route with GET.
+export const GET = POST;

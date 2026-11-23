@@ -2,13 +2,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { extractDashboardReadings } from '@/lib/gemini';
-import { uploadPhoto } from '@/lib/blob-storage';
+import { getPhotoReadUrl, hasBlobConfig, uploadPhoto } from '@/lib/blob-storage';
+
+// Simple per-user guard so one account can't exhaust the shared Gemini quota.
+// Counts are per server instance and reset every 24 hours.
+const DAILY_SCAN_LIMIT = Number(process.env.DAILY_SCAN_LIMIT) || 60;
+const scanCounts = new Map<string, { windowStart: number; count: number }>();
+
+function allowScan(userKey: string): boolean {
+  const now = Date.now();
+  const entry = scanCounts.get(userKey);
+  if (!entry || now - entry.windowStart > 24 * 60 * 60 * 1000) {
+    scanCounts.set(userKey, { windowStart: now, count: 1 });
+    return true;
+  }
+  if (entry.count >= DAILY_SCAN_LIMIT) return false;
+  entry.count += 1;
+  return true;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userKey = session.user.uid || session.user.email || 'unknown';
+    if (!allowScan(userKey)) {
+      return NextResponse.json(
+        { success: false, error: 'Daily scan limit reached. Please enter the trip details manually.' },
+        { status: 429 }
+      );
     }
 
     const formData = await req.formData();
@@ -38,22 +63,22 @@ export async function POST(req: NextRequest) {
     const base64 = buffer.toString('base64');
     const mimeType = file.type || 'image/jpeg';
 
-    // 1. Upload to Azure Blob Storage (or fallback data URL)
-    let photoURL = '';
-    try {
-      photoURL = await uploadPhoto(buffer, file.name || 'cluster.jpg', mimeType);
-    } catch (err) {
-      console.warn('Storage upload warning, fallback to data url:', err);
-      photoURL = `data:${mimeType};base64,${base64}`;
-    }
-
-    // 2. Extract readings via Vision LLM (Gemini Flash)
-    const extraction = await extractDashboardReadings(base64, mimeType);
+    // Run the AI extraction and the photo upload in parallel.
+    const [extraction, photoURL] = await Promise.all([
+      extractDashboardReadings(base64, mimeType),
+      uploadPhoto(buffer, file.name || 'cluster.jpg', mimeType).catch((err) => {
+        // Never store a multi-MB data URL in the trip when blob storage is
+        // configured but failing: save the trip without a photo instead.
+        console.warn('Storage upload failed:', err);
+        return hasBlobConfig() ? '' : `data:${mimeType};base64,${base64}`;
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
       data: {
-        photoURL,
+        // Signed, short-lived link so the private photo can be previewed.
+        photoURL: await getPhotoReadUrl(photoURL),
         distanceKm: extraction.distance_km,
         avgMileageKmpl: extraction.avg_mileage_kmpl,
         confidenceDistance: extraction.confidence_distance,

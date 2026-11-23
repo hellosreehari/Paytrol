@@ -1,31 +1,51 @@
-import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
+import { BlobSASPermissions, BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 
 const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const containerName = process.env.AZURE_STORAGE_CONTAINER || 'dashboard-photos';
+const READ_URL_TTL_MS = 60 * 60 * 1000; // signed photo links stay valid for 1 hour
 
-let containerClient: ContainerClient | null = null;
+let containerPromise: Promise<ContainerClient> | null = null;
 
-function hasBlobConfig(): boolean {
+export function hasBlobConfig(): boolean {
   if (!connectionString) return false;
   if (connectionString.includes('AccountName=...') || connectionString.includes('your_account')) return false;
   return connectionString.includes('DefaultEndpointsProtocol=');
 }
 
-async function getContainerClient(): Promise<ContainerClient> {
-  if (!containerClient) {
+function getContainerClient(): Promise<ContainerClient> {
+  if (!containerPromise) {
     if (!connectionString) {
-      throw new Error('AZURE_STORAGE_CONNECTION_STRING is not set');
+      return Promise.reject(new Error('AZURE_STORAGE_CONNECTION_STRING is not set'));
     }
-    const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-    containerClient = blobServiceClient.getContainerClient(containerName);
-    await containerClient.createIfNotExists();
-    await containerClient.setAccessPolicy(undefined, []);
+    containerPromise = (async () => {
+      const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+      const client = blobServiceClient.getContainerClient(containerName);
+      // The container is private: photos are only reachable through signed URLs.
+      await client.createIfNotExists();
+      return client;
+    })();
+    containerPromise.catch(() => {
+      containerPromise = null;
+    });
   }
-  return containerClient;
+  return containerPromise;
+}
+
+function getBlobName(blobUrl: string): string | null {
+  try {
+    const url = new URL(blobUrl);
+    const prefix = `/${containerName}/`;
+    if (!url.pathname.startsWith(prefix)) return null;
+    return decodeURIComponent(url.pathname.slice(prefix.length)) || null;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Upload a photo buffer to Azure Blob Storage, or return a base64 Data URL fallback.
+ * Upload a photo buffer to Azure Blob Storage, or return a base64 Data URL
+ * fallback when blob storage isn't configured (local development).
+ * Returns the canonical (unsigned) blob URL that is stored on the trip.
  */
 export async function uploadPhoto(
   buffer: Buffer,
@@ -33,13 +53,12 @@ export async function uploadPhoto(
   contentType: string = 'image/jpeg'
 ): Promise<string> {
   if (!hasBlobConfig()) {
-    // Graceful fallback for local development or preview without Azure storage connection string
     const base64 = buffer.toString('base64');
     return `data:${contentType};base64,${base64}`;
   }
 
   const container = await getContainerClient();
-  const blobName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  const blobName = `${Date.now()}-${crypto.randomUUID()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
   const blockBlobClient = container.getBlockBlobClient(blobName);
 
   await blockBlobClient.upload(buffer, buffer.length, {
@@ -50,18 +69,61 @@ export async function uploadPhoto(
 }
 
 /**
+ * Normalise a photo URL coming back from the client before it is stored:
+ * signed query strings are stripped, and only photos from our own container
+ * (or data URLs in local development) are accepted.
+ */
+export function normalizeStoredPhotoUrl(photoURL: unknown): string | null {
+  if (typeof photoURL !== 'string' || photoURL === '') return '';
+  if (photoURL.startsWith('data:image/')) {
+    return hasBlobConfig() ? null : photoURL;
+  }
+  if (!hasBlobConfig()) return null;
+  const blobName = getBlobName(photoURL);
+  if (!blobName) return null;
+  try {
+    const url = new URL(photoURL);
+    const expected = new URL(BlobServiceClient.fromConnectionString(connectionString!).url);
+    if (url.host !== expected.host) return null;
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Turn a stored blob URL into a short-lived signed URL the browser can load.
+ * Data URLs and empty values pass through unchanged.
+ */
+export async function getPhotoReadUrl(photoURL: string): Promise<string> {
+  if (!photoURL || photoURL.startsWith('data:') || !hasBlobConfig()) return photoURL;
+  const blobName = getBlobName(photoURL);
+  if (!blobName) return photoURL;
+  try {
+    const container = await getContainerClient();
+    return await container.getBlockBlobClient(blobName).generateSasUrl({
+      permissions: BlobSASPermissions.parse('r'),
+      expiresOn: new Date(Date.now() + READ_URL_TTL_MS),
+    });
+  } catch (err) {
+    console.warn('Could not sign photo URL:', err);
+    return photoURL;
+  }
+}
+
+/**
  * Delete a photo from Azure Blob Storage.
  */
 export async function deletePhoto(blobUrl: string): Promise<void> {
-  if (!hasBlobConfig() || blobUrl.startsWith('data:')) {
+  if (!blobUrl || !hasBlobConfig() || blobUrl.startsWith('data:')) {
     return;
   }
 
   try {
+    const blobName = getBlobName(blobUrl);
+    if (!blobName) return;
     const container = await getContainerClient();
-    const blobName = blobUrl.split('/').pop()!;
-    const blockBlobClient = container.getBlockBlobClient(blobName);
-    await blockBlobClient.deleteIfExists();
+    await container.getBlockBlobClient(blobName).deleteIfExists();
   } catch (err) {
     console.warn('Failed to delete blob:', err);
   }

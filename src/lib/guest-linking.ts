@@ -6,6 +6,7 @@ import {
   queryDocuments,
   updateDocument,
 } from '@/lib/cosmos';
+import { roundMoney } from '@/lib/money';
 import type { Balance, GuestContact, Trip, TripParticipant, UserProfile } from '@/types';
 
 function getBalanceKey(uidA: string, uidB: string) {
@@ -41,7 +42,7 @@ export async function linkGuestContact(
 
       const existing = updatedParticipants.find((item) => item.uid === user.id);
       if (existing) {
-        existing.shareAmount += participant.shareAmount;
+        existing.shareAmount = roundMoney(existing.shareAmount + participant.shareAmount);
         existing.settled = existing.settled && participant.settled;
         existing.guestContactId = contact.id;
         if (!existing.settled) existing.settledAt = null;
@@ -68,9 +69,10 @@ export async function linkGuestContact(
 
     if (linkedBalance) {
       const migratedUid1 = guestBalance.uid1 === contact.guestUid ? user.id : guestBalance.uid1;
-      linkedBalance.netAmount += linkedBalance.uid1 === migratedUid1
-        ? guestBalance.netAmount
-        : -guestBalance.netAmount;
+      linkedBalance.netAmount = roundMoney(
+        linkedBalance.netAmount +
+          (linkedBalance.uid1 === migratedUid1 ? guestBalance.netAmount : -guestBalance.netAmount)
+      );
       await updateDocument('balances', linkedBalance);
     } else {
       const migratedBalance: Balance = {
