@@ -1,6 +1,7 @@
 import { CosmosClient, Database, Container, SqlParameter } from '@azure/cosmos';
 import type { Document, Filter } from 'mongodb';
-import { isMongoConnectionString, MongoStore } from './mongo-store';
+import sift from 'sift';
+import { isMongoConnectionString, MongoStore, sortNewestFirst } from './mongo-store';
 
 export { equalsIgnoreCase } from './mongo-store';
 
@@ -267,6 +268,10 @@ export async function deleteDocument(containerId: string, id: string): Promise<v
   await container.item(id, id).delete();
 }
 
+function sortByCreatedAtDesc(query: string): boolean {
+  return /ORDER BY c\.createdAt DESC/i.test(query);
+}
+
 /**
  * Query a container. `query` is Cosmos SQL (used with Cosmos DB for NoSQL);
  * `mongoFilter` is the same query as a MongoDB filter (used with Cosmos DB
@@ -280,65 +285,15 @@ export async function queryDocuments<T>(
 ): Promise<T[]> {
   const mode = backend();
   if (mode === 'mongo') {
-    return getMongoStore().query<T>(containerId, mongoFilter, /ORDER BY c\.createdAt DESC/i.test(query));
+    return getMongoStore().query<T>(containerId, mongoFilter, sortByCreatedAtDesc(query));
   }
   if (mode === 'memory') {
+    // The in-memory store evaluates the MongoDB filter, so local development
+    // and the tests exercise the same filters production uses on MongoDB.
     const map = memoryStore[containerId];
     if (!map) return [];
-    let items = Array.from(map.values()) as Record<string, unknown>[];
-
-    // Basic in-memory filter matching common query parameters
-    if (parameters && parameters.length > 0) {
-      for (const param of parameters) {
-        if (param.name === '@uid') {
-          items = items.filter(
-            (item) =>
-              item.creatorUid === param.value ||
-              item.fromUid === param.value ||
-              item.toUid === param.value ||
-              item.uid1 === param.value ||
-              item.uid2 === param.value ||
-              (Array.isArray(item.participants) &&
-                item.participants.some(
-                  (participant) =>
-                    typeof participant === 'object' &&
-                    participant !== null &&
-                    'uid' in participant &&
-                    participant.uid === param.value
-                ))
-          );
-        } else if (param.name === '@ownerUid') {
-          items = items.filter((item) => item.ownerUid === param.value);
-        } else if (param.name === '@contactId') {
-          items = items.filter(
-            (item) =>
-              Array.isArray(item.participants) &&
-              item.participants.some(
-                (participant) =>
-                  typeof participant === 'object' &&
-                  participant !== null &&
-                  'guestContactId' in participant &&
-                  participant.guestContactId === param.value
-              )
-          );
-        } else if (param.name === '@email') {
-          items = items.filter(
-            (item) =>
-              (typeof item.email === 'string' && item.email.toLowerCase() === String(param.value).toLowerCase()) ||
-              (typeof item.toEmail === 'string' && item.toEmail.toLowerCase() === String(param.value).toLowerCase())
-          );
-        }
-      }
-    }
-
-    // Sort by createdAt desc if applicable
-    items.sort((a, b) => {
-      if (typeof a.createdAt === 'string' && typeof b.createdAt === 'string') {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      return 0;
-    });
-
+    const items = (Array.from(map.values()) as Record<string, unknown>[]).filter(sift(mongoFilter as Parameters<typeof sift>[0]));
+    if (sortByCreatedAtDesc(query)) sortNewestFirst(items);
     return JSON.parse(JSON.stringify(items)) as T[];
   }
 

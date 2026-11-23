@@ -1,10 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import { MongoClient, MongoServerError, type Collection, type Db, type Document, type Filter } from 'mongodb';
 
 /**
  * Storage backend for Azure Cosmos DB for MongoDB (or any MongoDB). Documents
  * keep the app's own `id` field and use the same value as `_id`. `_version`
- * is an internal counter used for optimistic concurrency, standing in for
- * Cosmos NoSQL's _etag. Neither internal field is returned to callers.
+ * is a token that changes on every write, used for optimistic concurrency
+ * like Cosmos NoSQL's _etag. Neither internal field is returned to callers.
  */
 
 export function isMongoConnectionString(value: string | undefined): boolean {
@@ -53,11 +54,20 @@ function byId(id: string): Filter<Document> {
   return { _id: id } as unknown as Filter<Document>;
 }
 
-function toStored<T extends { id: string }>(doc: T, version: number): Document {
+function toStored<T extends { id: string }>(doc: T): Document {
   const copy = JSON.parse(JSON.stringify(doc)) as Record<string, unknown>;
   delete copy._etag;
   delete copy._version;
-  return { ...copy, _id: doc.id, _version: version } as Document;
+  return { ...copy, _id: doc.id, _version: randomUUID() } as Document;
+}
+
+/** Sort documents by their createdAt timestamp, newest first, in place. */
+export function sortNewestFirst<T>(items: T[]): T[] {
+  const time = (item: T) => {
+    const value = (item as { createdAt?: unknown }).createdAt;
+    return typeof value === 'string' ? new Date(value).getTime() || 0 : 0;
+  };
+  return items.sort((a, b) => time(b) - time(a));
 }
 
 function fromStored<T>(doc: Document | null): T | null {
@@ -99,7 +109,7 @@ export class MongoStore {
 
   async create<T extends { id: string }>(name: string, doc: T): Promise<T> {
     const collection = await this.collection(name);
-    await collection.insertOne(toStored(doc, 1));
+    await collection.insertOne(toStored(doc));
     return doc;
   }
 
@@ -110,9 +120,7 @@ export class MongoStore {
 
   async update<T extends { id: string }>(name: string, doc: T): Promise<T> {
     const collection = await this.collection(name);
-    const current = await collection.findOne(byId(doc.id), { projection: { _version: 1 } });
-    const version = typeof current?._version === 'number' ? current._version + 1 : 1;
-    const result = await collection.replaceOne(byId(doc.id), toStored(doc, version));
+    const result = await collection.replaceOne(byId(doc.id), toStored(doc));
     if (result.matchedCount === 0) {
       const error = new Error(`Document ${doc.id} not found in ${name}`) as Error & { code: number };
       error.code = 404;
@@ -132,14 +140,7 @@ export class MongoStore {
     const items = docs.map((doc) => fromStored<T>(doc) as T);
     // Sorted here rather than in the database: Cosmos DB for MongoDB rejects
     // a sort on a field without a matching index.
-    if (sortByCreatedAtDesc) {
-      items.sort((a, b) => {
-        const ta = new Date(String((a as { createdAt?: unknown }).createdAt ?? 0)).getTime() || 0;
-        const tb = new Date(String((b as { createdAt?: unknown }).createdAt ?? 0)).getTime() || 0;
-        return tb - ta;
-      });
-    }
-    return items;
+    return sortByCreatedAtDesc ? sortNewestFirst(items) : items;
   }
 
   /** Read-modify-write conditioned on _version, retried on conflicts. */
@@ -157,16 +158,13 @@ export class MongoStore {
       if (!next) return current;
 
       if (stored) {
-        const version = typeof stored._version === 'number' ? stored._version : 0;
-        const versionFilter = version === 0 ? { _version: { $exists: false } } : { _version: version };
-        const result = await collection.replaceOne(
-          { ...byId(id), ...versionFilter } as Filter<Document>,
-          toStored(next, version + 1)
-        );
+        // Only replace the copy we read: a write in between changes _version.
+        const versionFilter = stored._version === undefined ? { _version: { $exists: false } } : { _version: stored._version };
+        const result = await collection.replaceOne({ ...byId(id), ...versionFilter } as Filter<Document>, toStored(next));
         if (result.matchedCount === 1) return next;
       } else {
         try {
-          await collection.insertOne(toStored(next, 1));
+          await collection.insertOne(toStored(next));
           return next;
         } catch (e) {
           if (!isDuplicateKey(e)) throw e;
