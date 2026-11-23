@@ -4,8 +4,8 @@ As-built ≠ intent. This file records what actually shipped, and every place th
 
 | Milestone | State | PR |
 |---|---|---|
-| PAY0 — the spec | in_progress | PR #1 |
-| PAY1 — app on Workers | pending | - |
+| PAY0 — the spec | done | PR #1 |
+| PAY1 — app on Workers | in_progress | PR #2 |
 | PAY2 — Orun wiring and CI | pending | - |
 | PAY3 — live on stage and prod | pending | - |
 | PAY4 — ready to hand over | pending | - |

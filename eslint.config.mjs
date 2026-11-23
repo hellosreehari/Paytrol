@@ -10,6 +10,12 @@ const eslintConfig = defineConfig([
       'react-hooks/set-state-in-effect': 'off',
     },
   },
+  {
+    files: ["worker.ts"],
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -22,6 +28,8 @@ const eslintConfig = defineConfig([
     ".cursor/**",
     ".github/**",
     ".open-next/**",
+    ".wrangler/**",
+    "tooling/**",
   ]),
 ]);
 
