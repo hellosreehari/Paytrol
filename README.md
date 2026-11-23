@@ -4,48 +4,41 @@
 
 ---
 
-## 🚀 Connecting GitHub to Azure (Zero-Config 1-Click Deployment)
+## 🚀 Deployment (Azure App Service)
 
-This application is ready to deploy directly to **Azure Static Web Apps** (or Azure App Service) with the included GitHub Actions workflow.
+Paytrol runs on **Azure App Service (Linux, Node 24)** and deploys from GitHub Actions:
 
-### Step 1: Push to your GitHub Repository
-```bash
-git add .
-git commit -m "Initial commit of Paytrol PWA"
-git branch -M main
-git remote add origin https://github.com/<your-username>/paytrol.git
-git push -u origin main
-```
+| Workflow | When | What |
+| --- | --- | --- |
+| `ci.yml` | every pull request | lint, typecheck, tests, build |
+| `main_paytrol.yml` | push to `main` | the same checks, then deploys the standalone Next.js bundle and calls `/api/health` |
+| `photo-cleanup.yml` | daily, 03:00 IST | deletes dashboard photos older than 7 days |
 
-### Step 2: Connect Azure to your GitHub Repo
-1. Go to the [Azure Portal](https://portal.azure.com/).
-2. Click **Create a resource** → Search for **Static Web App** → Click **Create**.
-3. Fill in:
-   - **Subscription**: Your company Azure subscription (Free)
-   - **Resource Group**: Select or create one (e.g., `rg-paytrol`)
-   - **Name**: `paytrol`
-   - **Plan type**: **Free**
-   - **Deployment details**: Select **GitHub** and authorize.
-   - **Repository**: Select your `paytrol` repository.
-   - **Branch**: `main`
-   - **Build Presets**: Select **Next.js**
-     - App location: `/`
-     - Api location: (leave blank)
-     - Output location: (leave blank)
-4. Click **Review + Create**.
-   - Azure automatically adds a deployment token to your GitHub repository secrets and triggers `.github/workflows/azure-static-web-apps.yml`.
-   - Your PWA will be live on an Azure URL (e.g. `https://salmon-island-...azurestaticapps.net`) in ~2 minutes!
+### App settings (App Service → Settings → Environment variables)
 
-### Step 3: Configure Environment Variables in Azure Portal
-In your Azure Static Web App, navigate to **Configuration** → **Application settings** and add:
-- `NEXTAUTH_SECRET`: Random 32+ character string
-- `NEXTAUTH_URL`: Your Azure Static Web App domain (e.g. `https://<app>.azurestaticapps.net`)
-- `GOOGLE_CLIENT_ID`: Your Google OAuth Client ID
-- `GOOGLE_CLIENT_SECRET`: Your Google OAuth Client Secret
-- `GEMINI_API_KEY`: Google AI Studio Gemini API key (Free tier: 15 req/min)
-- `COSMOS_ENDPOINT`: Your Azure Cosmos DB endpoint (Optional - in-memory fallback included)
-- `COSMOS_KEY`: Your Azure Cosmos DB key (Optional)
-- `AZURE_STORAGE_CONNECTION_STRING`: Your Azure Blob Storage connection string (Optional)
+| Setting | Required | Notes |
+| --- | --- | --- |
+| `NEXTAUTH_SECRET` | yes | random 32+ characters |
+| `NEXTAUTH_URL` | yes | e.g. `https://paytrol.azurewebsites.net` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | yes | Google OAuth client |
+| `GEMINI_API_KEY` | yes | Google AI Studio key; optional `GEMINI_MODEL` (default `gemini-2.5-flash`) |
+| `AZURE_COSMOS_CONNECTIONSTRING` (or `COSMOS_ENDPOINT` + `COSMOS_KEY`) | yes | Cosmos DB for NoSQL, key-based connection string; database `COSMOS_DATABASE` (default `paytrol`) is created automatically |
+| `AZURE_STORAGE_CONNECTION_STRING` | recommended | photos go to the private `dashboard-photos` container; without it photos are stored inside trips |
+| `CRON_SECRET` | recommended | protects `/api/retention/cleanup` |
+
+Without the Cosmos settings the app refuses to save data in production rather than silently keeping it in memory
+(set `ALLOW_MEMORY_STORE=true` only for a throwaway demo).
+
+Use **Node 24 LTS** as the App Service runtime stack. The deploy sets the startup command to `node server.js`.
+
+### Where the data lives
+- **Trips, balances, friends, users, settlements:** Azure Portal → Cosmos DB account → **Data Explorer** → database `paytrol`.
+- **Dashboard photos:** Storage account → Containers → `dashboard-photos` (private; the app hands out 1-hour signed links).
+- **Is everything connected?** Open `https://<your-app>/api/health`. It shows which services are live without exposing secrets.
+
+### Photo cleanup schedule
+In GitHub → Settings → Secrets and variables → Actions, add the secret `CRON_SECRET` (same value as the app setting)
+and the variable `PAYTROL_URL` (e.g. `https://paytrol.azurewebsites.net`).
 
 ---
 
@@ -53,7 +46,9 @@ In your Azure Static Web App, navigate to **Configuration** → **Application se
 
 ```bash
 # 1. Install dependencies
-npm install
+npm ci
+
+# Copy .env.example to .env.local and fill in the Google + NextAuth values
 
 # 2. Run dev server
 npm run dev
@@ -70,7 +65,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Vehicle & Fuel Defaults**: Set default fuel type (**Petrol**, **Diesel**, **CNG**), currency (**INR ₹**), and last-paid fuel price per liter.
 
 ### 2. Capture, AI Extraction & Verification
-- **In-App Camera with Framing Guide**: Rectangular target to align trip distance and avg mileage. Also supports gallery upload.
+- **One-tap scan**: opens the phone's own picker to take a photo or choose one from the gallery, then shows a preview to confirm or retake.
 - **Gemini Vision Extraction**: Vision-capable AI specifically extracts trip distance (under *"Since start"*) and average fuel economy while ignoring total odometer (e.g. 66639 km) and range.
 - **Mandatory Verification Gate**:
   - Cropped photo preview at top with expand/collapse toggle.
@@ -83,9 +78,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 3. Friends Network & Email Invites
 - **Invite Friends**: Enter friend's email address.
-- **Existing User**: Instant in-app notification + email invite with Accept / Decline.
-- **New User**: Email with deep link; auto-links as friend upon first Google login.
-- **3 Tab Views**: `Friends`, `Pending Sent`, and `Pending Received`.
+- **Existing User**: sees the request in the app with Accept / Decline. (No email is sent.)
+- **New User**: the invite links automatically on their first Google sign-in with that email.
+- **Mutual invites** merge into one friendship.
+- One page: requests for you, your friends, invites you sent, and guests.
 
 ### 4. Trip Splitting & Ledger
 - Checkboxes for friends who joined + **"Include me in the split"** toggle.

@@ -50,7 +50,7 @@ export default function CapturePage() {
     setIsProcessing(true);
     setExtracting(true);
     setErrorMsg(null);
-    setStatusMessage('Compressing photo for fast analysis...');
+    setStatusMessage('Preparing photo…');
 
     try {
       setPhoto(file);
@@ -62,7 +62,7 @@ export default function CapturePage() {
           ? compressed
           : new File([compressed], uploadFileName, { type: 'image/jpeg' });
 
-      setStatusMessage('Sending to Gemini Vision AI (analyzing cluster numbers)...');
+      setStatusMessage('Finding trip distance and average mileage…');
 
       const formData = new FormData();
       formData.append('photo', uploadFile);
@@ -78,7 +78,7 @@ export default function CapturePage() {
         throw new Error(data.error || 'Failed to extract readings from photo');
       }
 
-      setStatusMessage('Readings detected! Preparing verification...');
+      setStatusMessage('Done');
 
       // Store in Zustand store
       setExtraction({
@@ -150,15 +150,15 @@ export default function CapturePage() {
       <header>
         <h1 className="text-2xl font-black text-white">Capture Dashboard</h1>
         <p className="text-xs text-slate-400 mt-1">
-          Aim at your car&apos;s digital cluster to capture trip distance &amp; average mileage.
+          Photograph your car&apos;s dashboard showing the trip distance and average mileage.
         </p>
       </header>
 
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-start gap-3">
-          <span className="text-base">❌</span>
+        <div role="alert" className="p-4 rounded-2xl bg-[#fdf0ee] border border-[#f0c9c4] text-[#8a2f22] text-xs flex items-start gap-3">
+          <span className="text-base" aria-hidden="true">!</span>
           <div className="space-y-1">
-            <p className="font-semibold text-red-200">Extraction Failed</p>
+            <p className="font-semibold text-[#6e2419]">Couldn&apos;t read the photo</p>
             <p>{errorMsg}</p>
           </div>
         </div>
@@ -246,21 +246,6 @@ export default function CapturePage() {
             Continue to verification
           </button>
         </form>
-      ) : isProcessing ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center space-y-4">
-          <div className="relative w-16 h-16 mx-auto">
-            <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20" />
-            <div className="absolute inset-0 rounded-full border-4 border-indigo-400 border-t-transparent animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center text-xl">🤖</div>
-          </div>
-          <div>
-            <p className="text-sm font-bold text-white">Analyzing Cluster with AI</p>
-            <p className="text-xs text-indigo-300 mt-1">{statusMessage}</p>
-          </div>
-          <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-            Distinguishing the trip distance from the total odometer and estimated range.
-          </p>
-        </div>
       ) : (
         <CameraCapture
           onCapture={handleCapture}
@@ -268,7 +253,8 @@ export default function CapturePage() {
             setErrorMsg(null);
             setManualEntry(true);
           }}
-          disabled={isProcessing}
+          processing={isProcessing}
+          statusMessage={statusMessage}
         />
       )}
     </div>

@@ -1,0 +1,28 @@
+name: Photo retention cleanup
+
+# Deletes dashboard photos older than 7 days (see /api/retention/cleanup).
+# Needs the repository secret CRON_SECRET (same value as the app setting) and
+# the repository variable PAYTROL_URL, e.g. https://paytrol.azurewebsites.net
+on:
+  schedule:
+    - cron: '30 21 * * *' # 03:00 IST
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call cleanup endpoint
+        env:
+          PAYTROL_URL: ${{ vars.PAYTROL_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$PAYTROL_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::Set the PAYTROL_URL variable and CRON_SECRET secret to enable photo cleanup."
+            exit 0
+          fi
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$PAYTROL_URL/api/retention/cleanup"

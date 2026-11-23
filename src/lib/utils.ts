@@ -111,7 +111,7 @@ export async function compressImage(file: File, maxSizeBytes: number = 1024 * 10
       canvas.height = height;
       ctx?.drawImage(img, 0, 0, width, height);
 
-      let quality = 0.8;
+      let quality = 0.9;
       const tryCompress = () => {
         canvas.toBlob(
           (blob) => {

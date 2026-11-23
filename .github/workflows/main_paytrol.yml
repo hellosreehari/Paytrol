@@ -9,6 +9,10 @@ on:
       - 'main'
   workflow_dispatch:
 
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,26 +23,32 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js version
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '26.x'
+          node-version-file: .nvmrc
+          cache: npm
 
-      - name: npm install, build, and test
+      - name: Install, check, test and build
         run: |
-          npm install
-          npm run build --if-present
-          npm run test --if-present
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run build
+
+      # next build (output: 'standalone') produces a self-contained server in
+      # .next/standalone; static assets have to be copied in next to it.
+      - name: Assemble standalone bundle
+        run: |
+          cp -r public .next/standalone/public
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/static
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: |
-            .next
-            public
-            package.json
-            package-lock.json
-            next.config.ts
+          path: .next/standalone
           include-hidden-files: true
 
   deploy:
@@ -46,22 +56,13 @@ jobs:
     needs: build
     permissions:
       id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: node-app
-
-      - name: Set up Node.js version
-        uses: actions/setup-node@v4
-        with:
-          node-version: '26.x'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -79,4 +80,19 @@ jobs:
           package: .
           clean: true
           restart: true
-          startup-command: node node_modules/next/dist/bin/next start
+          startup-command: HOSTNAME=0.0.0.0 node server.js
+
+      # Fails the run if the app can't reach its database, photo storage,
+      # Gemini or sign-in config. Open /api/health in a browser for details.
+      - name: Health check
+        env:
+          APP_URL: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+        run: |
+          for attempt in $(seq 1 20); do
+            code=$(curl -s -o health.json -w '%{http_code}' "$APP_URL/api/health" || true)
+            if [ "$code" = "200" ]; then cat health.json; exit 0; fi
+            if [ "$code" = "503" ]; then echo "Health check reported a problem:"; cat health.json; exit 1; fi
+            echo "Attempt $attempt: HTTP $code, waiting for the app to start..."
+            sleep 15
+          done
+          echo "App did not become healthy in time"; exit 1
