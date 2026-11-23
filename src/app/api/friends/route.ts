@@ -5,6 +5,37 @@ import { createDocument, queryDocuments, getDocument, updateDocument, deleteDocu
 import type { Friendship, UserProfile } from '@/types';
 import { generateId } from '@/lib/utils';
 
+/**
+ * Every friendship document involving this user, filtered in code so the
+ * result is exact on both Cosmos and the in-memory store.
+ */
+async function getRelationships(uid: string, email: string | undefined): Promise<Friendship[]> {
+  const docs = await queryDocuments<Friendship>(
+    'friendships',
+    'SELECT * FROM c WHERE c.fromUid = @me OR c.toUid = @me OR LOWER(c.toEmail) = @myEmail',
+    [
+      { name: '@me', value: uid },
+      { name: '@myEmail', value: email || '' },
+    ]
+  );
+  const seen = new Set<string>();
+  return docs.filter((doc) => {
+    if (seen.has(doc.id)) return false;
+    seen.add(doc.id);
+    return (
+      doc.fromUid === uid ||
+      doc.toUid === uid ||
+      (!!email && doc.toEmail?.toLowerCase() === email && doc.fromUid !== uid)
+    );
+  });
+}
+
+/** A stable key for "the other person" so mutual invites collapse into one entry. */
+function otherPartyKey(doc: Friendship, uid: string): string {
+  if (doc.fromUid === uid) return doc.toUid || doc.toEmail.toLowerCase();
+  return doc.fromUid;
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -31,29 +62,23 @@ export async function GET() {
       }
     }
 
-    // 1. Fetch invites sent by current user
-    const sent = await queryDocuments<Friendship>(
-      'friendships',
-      'SELECT * FROM c WHERE c.fromUid = @uid',
-      [{ name: '@uid', value: uid }]
-    );
+    const relationships = await getRelationships(uid, email);
 
-    // 2. Fetch invites received by current user
-    const received = await queryDocuments<Friendship>(
-      'friendships',
-      'SELECT * FROM c WHERE c.toUid = @uid OR (c.toEmail = @email AND c.fromUid != @uid)',
-      [
-        { name: '@uid', value: uid },
-        { name: '@email', value: email || '' },
-      ]
+    // One entry per person: mutual or repeated invites must not show twice.
+    const friends: Friendship[] = [];
+    const friendKeys = new Set<string>();
+    for (const doc of relationships) {
+      if (doc.status !== 'accepted') continue;
+      const key = otherPartyKey(doc, uid);
+      if (friendKeys.has(key)) continue;
+      friendKeys.add(key);
+      friends.push(doc);
+    }
+    const pendingSent = relationships.filter(
+      (doc) => doc.status === 'pending' && doc.fromUid === uid && !friendKeys.has(otherPartyKey(doc, uid))
     );
-
-    // Filter duplicates and partition into tabs
-    const all = [...sent, ...received];
-    const friends = all.filter((f) => f.status === 'accepted');
-    const pendingSent = sent.filter((f) => f.status === 'pending');
-    const pendingReceived = received.filter(
-      (f) => f.status === 'pending' && f.fromUid !== uid
+    const pendingReceived = relationships.filter(
+      (doc) => doc.status === 'pending' && doc.fromUid !== uid && !friendKeys.has(otherPartyKey(doc, uid))
     );
 
     return NextResponse.json({
@@ -99,15 +124,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if invite or friendship already exists
-    const existing = await queryDocuments<Friendship>(
-      'friendships',
-      'SELECT * FROM c WHERE (c.fromUid = @uid AND c.toEmail = @email) OR (c.toUid = @uid AND c.fromEmail = @email)',
-      [
-        { name: '@uid', value: uid },
-        { name: '@email', value: targetEmail },
-      ]
+    // Check if invite or friendship already exists, in either direction
+    const myEmail = session?.user?.email?.toLowerCase();
+    const existing = (await getRelationships(uid, myEmail)).filter((invite) =>
+      invite.fromUid === uid
+        ? invite.toEmail.toLowerCase() === targetEmail
+        : invite.fromEmail?.toLowerCase() === targetEmail
     );
+
+    // They already invited us: accept that invite instead of creating a second one.
+    const theirInvite = existing.find((invite) => invite.status === 'pending' && invite.fromUid !== uid);
+    if (theirInvite && !existing.some((invite) => invite.status === 'accepted')) {
+      theirInvite.status = 'accepted';
+      theirInvite.toUid = uid;
+      theirInvite.updatedAt = new Date().toISOString();
+      const accepted = await updateDocument('friendships', theirInvite);
+      return NextResponse.json({
+        success: true,
+        data: accepted,
+        message: `${theirInvite.fromName || 'They'} had already invited you, so you're now friends.`,
+      });
+    }
 
     if (existing.some((invite) => invite.status === 'accepted')) {
       return NextResponse.json(
@@ -138,7 +175,7 @@ export async function POST(req: NextRequest) {
       id: generateId(),
       fromUid: uid,
       fromName: session?.user?.name || 'Driver',
-      fromEmail: session?.user?.email || 'driver@paytrol.app',
+      fromEmail: myEmail || 'driver@paytrol.app',
       fromPhoto: session?.user?.image || null,
       toUid: targetUser?.id || null,
       toEmail: targetEmail,

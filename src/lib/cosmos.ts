@@ -24,16 +24,54 @@ function isAzureCosmosConfigured(): boolean {
   return endpoint.startsWith('https://');
 }
 
+/**
+ * In production the in-memory store is a silent data-loss trap (everything is
+ * wiped on restart and every instance has its own copy), so it is refused
+ * unless ALLOW_MEMORY_STORE=true is set explicitly.
+ */
+export function isMemoryStoreAllowed(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.ALLOW_MEMORY_STORE === 'true';
+}
+
+export class StorageNotConfiguredError extends Error {
+  constructor() {
+    super(
+      'Database is not configured. Set COSMOS_ENDPOINT and COSMOS_KEY in the app settings ' +
+        '(or ALLOW_MEMORY_STORE=true to knowingly use a temporary in-memory store).'
+    );
+    this.name = 'StorageNotConfiguredError';
+  }
+}
+
+export function getStorageMode(): 'cosmos' | 'memory' | 'unconfigured' {
+  if (isAzureCosmosConfigured()) return 'cosmos';
+  return isMemoryStoreAllowed() ? 'memory' : 'unconfigured';
+}
+
 function hasAzureCosmosConfig(): boolean {
   const configured = isAzureCosmosConfigured();
-  if (!configured && !warnedAboutMemoryStore && process.env.NODE_ENV === 'production') {
+  if (configured) return true;
+  if (!isMemoryStoreAllowed()) {
+    if (!warnedAboutMemoryStore) {
+      warnedAboutMemoryStore = true;
+      console.error('[cosmos] COSMOS_ENDPOINT / COSMOS_KEY are not configured. Refusing to use the in-memory store in production.');
+    }
+    throw new StorageNotConfiguredError();
+  }
+  if (!warnedAboutMemoryStore && process.env.NODE_ENV === 'production') {
     warnedAboutMemoryStore = true;
     console.error(
-      '[cosmos] COSMOS_ENDPOINT / COSMOS_KEY are not configured. Using the in-memory store: ' +
-        'all data will be lost when the server restarts.'
+      '[cosmos] Using the in-memory store (ALLOW_MEMORY_STORE=true): all data will be lost when the server restarts.'
     );
   }
-  return configured;
+  return false;
+}
+
+/** Cheap connectivity check for the health endpoint. */
+export async function pingDatabase(): Promise<void> {
+  if (!isAzureCosmosConfigured()) return;
+  const db = await getDatabase();
+  await db.read();
 }
 
 function getClient(): CosmosClient {

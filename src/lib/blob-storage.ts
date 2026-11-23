@@ -42,6 +42,13 @@ function getBlobName(blobUrl: string): string | null {
   }
 }
 
+/** Cheap connectivity check for the health endpoint. */
+export async function pingBlobStorage(): Promise<void> {
+  if (!hasBlobConfig()) return;
+  const container = await getContainerClient();
+  await container.getProperties();
+}
+
 /**
  * Upload a photo buffer to Azure Blob Storage, or return a base64 Data URL
  * fallback when blob storage isn't configured (local development).
