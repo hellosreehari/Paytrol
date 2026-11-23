@@ -53,7 +53,7 @@ export default function HomePage() {
             <span className="text-lg">👋</span>
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            {profile?.defaultFuelType?.toUpperCase() || 'PETROL'} • ₹{profile?.lastFuelPrice || 105}/L
+            {profile?.defaultFuelType?.toUpperCase() || 'PETROL'} • {profile?.lastFuelPrice ? `₹${profile.lastFuelPrice}/L` : 'Fuel price not set'}
           </p>
         </div>
 

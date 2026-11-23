@@ -21,7 +21,7 @@ export default function SetupPage() {
   );
   const [currency] = useState('INR');
   const [fuelPrice, setFuelPrice] = useState(
-    profile?.lastFuelPrice ? String(profile.lastFuelPrice) : '105.00'
+    profile?.lastFuelPrice ? String(profile.lastFuelPrice) : ''
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +140,7 @@ export default function SetupPage() {
                 required
                 value={fuelPrice}
                 onChange={(e) => setFuelPrice(e.target.value)}
-                placeholder="105.00"
+                placeholder="Enter fuel price"
                 className="w-full bg-transparent text-2xl font-bold text-[#1b231f] outline-none placeholder-slate-400"
               />
               <span className="text-xs text-slate-400 font-medium">/ Liter</span>

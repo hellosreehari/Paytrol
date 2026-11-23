@@ -25,7 +25,7 @@ export async function GET() {
         photoURL: session.user.image || null,
         defaultFuelType: 'petrol',
         currency: 'INR',
-        lastFuelPrice: 105.0,
+        lastFuelPrice: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -65,7 +65,9 @@ export async function POST(req: NextRequest) {
         photoURL: body.photoURL ?? existing.photoURL ?? session?.user?.image ?? null,
         defaultFuelType: body.defaultFuelType ?? existing.defaultFuelType ?? 'petrol',
         currency: body.currency ?? existing.currency ?? 'INR',
-        lastFuelPrice: Number(body.lastFuelPrice) || existing.lastFuelPrice || 105.0,
+        lastFuelPrice: Number(body.lastFuelPrice) > 0
+          ? Number(body.lastFuelPrice)
+          : existing.lastFuelPrice,
         updatedAt: new Date().toISOString(),
       };
       const result = await updateDocument('users', updated);
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
         photoURL: body.photoURL || session?.user?.image || null,
         defaultFuelType: body.defaultFuelType || 'petrol',
         currency: body.currency || 'INR',
-        lastFuelPrice: Number(body.lastFuelPrice) || 105.0,
+        lastFuelPrice: Number(body.lastFuelPrice) > 0 ? Number(body.lastFuelPrice) : 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

@@ -21,6 +21,11 @@ export default function VerifyPage() {
   const [activePhoto, setActivePhoto] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!extraction) {
+      router.replace('/capture');
+      return;
+    }
+
     // Check if we have photo or extraction from store or sessionStorage
     const manualEntry = sessionStorage.getItem('paytrol_manualEntry') === 'true';
     const storedPhoto = sessionStorage.getItem('paytrol_photoURL');
@@ -32,7 +37,7 @@ export default function VerifyPage() {
       setActivePhoto(null);
     }
 
-  }, [extraction, photoPreviewUrl, setPhotoPreviewUrl]);
+  }, [extraction, photoPreviewUrl, router, setPhotoPreviewUrl]);
 
   const handleConfirm = (data: {
     distanceKm: number;
@@ -46,17 +51,12 @@ export default function VerifyPage() {
     setFuelPricePerLiter(data.fuelPricePerLiter);
 
     // Save verified calculation to sessionStorage for Split screen
-    sessionStorage.setItem('paytrol_verified', JSON.stringify(data));
+    sessionStorage.setItem('paytrol_verified_v2', JSON.stringify(data));
     sessionStorage.removeItem('paytrol_manualEntry');
     router.push('/split');
   };
 
-  const currentExtraction = extraction || {
-    distanceKm: 6.0,
-    avgMileageKmpl: 5.8,
-    confidenceDistance: 'high' as const,
-    confidenceMileage: 'high' as const,
-  };
+  if (!extraction) return null;
 
   return (
     <div className="space-y-5">
@@ -76,9 +76,9 @@ export default function VerifyPage() {
       </header>
 
       <VerificationForm
-        extraction={currentExtraction}
+        extraction={extraction}
         photoUrl={activePhoto}
-        defaultFuelPrice={profile?.lastFuelPrice || 105.0}
+        defaultFuelPrice={profile?.lastFuelPrice || 0}
         currency={profile?.currency || 'INR'}
         onConfirm={handleConfirm}
       />

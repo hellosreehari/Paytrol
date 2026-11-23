@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useEffect, useState, useId } from 'react';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { ExtractionResult } from '@/types';
 
@@ -25,10 +25,16 @@ export default function VerificationForm({
   currency = 'INR',
   onConfirm,
 }: VerificationFormProps) {
-  const [distanceKm, setDistanceKm] = useState<number>(extraction.distanceKm || 6.0);
-  const [avgMileage, setAvgMileage] = useState<number>(extraction.avgMileageKmpl || 5.8);
-  const [fuelPrice, setFuelPrice] = useState<number>(defaultFuelPrice || 105.0);
+  const [distanceKm, setDistanceKm] = useState<number>(extraction.distanceKm);
+  const [avgMileage, setAvgMileage] = useState<number>(extraction.avgMileageKmpl);
+  const [fuelPrice, setFuelPrice] = useState<number>(defaultFuelPrice);
   const [showFullPhoto, setShowFullPhoto] = useState(false);
+
+  useEffect(() => {
+    if (defaultFuelPrice > 0) {
+      setFuelPrice((current) => current || defaultFuelPrice);
+    }
+  }, [defaultFuelPrice]);
 
   const distanceInputId = useId();
   const mileageInputId = useId();
@@ -137,7 +143,7 @@ export default function VerificationForm({
               value={distanceKm || ''}
               onChange={(e) => setDistanceKm(parseFloat(e.target.value) || 0)}
               className="w-full bg-transparent text-2xl font-bold text-white outline-none"
-              placeholder="6.0"
+              placeholder="Enter distance"
             />
             <span className="text-slate-400 text-sm font-semibold">km</span>
           </div>
@@ -179,7 +185,7 @@ export default function VerificationForm({
               value={avgMileage || ''}
               onChange={(e) => setAvgMileage(parseFloat(e.target.value) || 0)}
               className="w-full bg-transparent text-2xl font-bold text-white outline-none"
-              placeholder="5.8"
+              placeholder="Enter mileage"
             />
             <span className="text-slate-400 text-sm font-semibold">km/L</span>
           </div>
@@ -193,7 +199,9 @@ export default function VerificationForm({
             >
               Fuel Price (per liter)
             </label>
-            <span className="text-[10px] text-slate-400">Pre-filled default</span>
+            {fuelPrice > 0 && (
+              <span className="text-[10px] text-slate-400">Saved fuel price</span>
+            )}
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-slate-400 text-lg font-bold">₹</span>
@@ -206,7 +214,7 @@ export default function VerificationForm({
               value={fuelPrice || ''}
               onChange={(e) => setFuelPrice(parseFloat(e.target.value) || 0)}
               className="w-full bg-transparent text-2xl font-bold text-white outline-none"
-              placeholder="105.00"
+              placeholder="Enter fuel price"
             />
             <span className="text-slate-400 text-sm font-semibold">/L</span>
           </div>

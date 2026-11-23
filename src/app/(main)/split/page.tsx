@@ -14,6 +14,14 @@ interface VerifiedTripData {
   totalCost: number;
 }
 
+function isVerifiedTripData(value: unknown): value is VerifiedTripData {
+  if (typeof value !== 'object' || value === null) return false;
+  const data = value as Record<string, unknown>;
+  return ['distanceKm', 'avgMileageKmpl', 'fuelPricePerLiter', 'fuelUsedLiters', 'totalCost'].every(
+    (key) => typeof data[key] === 'number' && Number.isFinite(data[key]) && data[key] > 0
+  );
+}
+
 export default function SplitPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -30,25 +38,20 @@ export default function SplitPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem('paytrol_verified');
-    if (raw) {
-      try {
-        setVerifiedData(JSON.parse(raw) as VerifiedTripData);
-      } catch {
-        setVerifiedData(null);
-        sessionStorage.removeItem('paytrol_verified');
-      }
-    } else {
-      // Default to the 6 km @ 5.8 km/l @ ₹105 sample if accessed directly
-      const fallbackData: VerifiedTripData = {
-        distanceKm: 6.0,
-        avgMileageKmpl: 5.8,
-        fuelPricePerLiter: 105.0,
-        fuelUsedLiters: 1.034,
-        totalCost: 108.62,
-      };
-      setVerifiedData(fallbackData);
-      sessionStorage.setItem('paytrol_verified', JSON.stringify(fallbackData));
+    const raw = sessionStorage.getItem('paytrol_verified_v2');
+    sessionStorage.removeItem('paytrol_verified');
+    if (!raw) {
+      router.replace('/capture');
+      return;
+    }
+    try {
+      const data: unknown = JSON.parse(raw);
+      if (!isVerifiedTripData(data)) throw new Error('Invalid verified trip data');
+      setVerifiedData(data);
+    } catch {
+      sessionStorage.removeItem('paytrol_verified_v2');
+      router.replace('/capture');
+      return;
     }
 
     // Load friends from API
@@ -79,7 +82,7 @@ export default function SplitPage() {
       }
     }
     loadFriends();
-  }, [user]);
+  }, [router, user]);
 
   const currentUserId = user?.uid || '';
   const friendUserIds = new Set(
@@ -105,6 +108,7 @@ export default function SplitPage() {
   ];
   const participantCount = participantKeys.length;
   const totalCost = verifiedData?.totalCost || 0;
+  if (!verifiedData) return null;
 
   const getParticipantShare = (participantKey: string): number => {
     if (participantCount <= 0 || totalCost <= 0) return 0;

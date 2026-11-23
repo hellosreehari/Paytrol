@@ -18,20 +18,28 @@ export default function ProfilePage() {
     profile?.defaultFuelType || 'petrol'
   );
   const [fuelPrice, setFuelPrice] = useState(
-    profile?.lastFuelPrice ? String(profile.lastFuelPrice) : '105.00'
+    profile?.lastFuelPrice ? String(profile.lastFuelPrice) : ''
   );
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setSavedSuccess(false);
 
+    const lastFuelPrice = Number(fuelPrice);
+    if (!Number.isFinite(lastFuelPrice) || lastFuelPrice <= 0) {
+      setSaveError('Enter a valid fuel price per liter.');
+      return;
+    }
+
+    setSaveError(null);
     const success = await updateProfile({
       defaultFuelType: fuelType,
       currency: 'INR',
-      lastFuelPrice: parseFloat(fuelPrice) || 105.0,
+      lastFuelPrice,
     });
 
     setSaving(false);
@@ -75,6 +83,11 @@ export default function ProfilePage() {
         <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
           <span>✓</span>
           <span>Profile &amp; vehicle preferences saved successfully!</span>
+        </div>
+      )}
+      {saveError && (
+        <div className="p-3.5 rounded-2xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs">
+          {saveError}
         </div>
       )}
 

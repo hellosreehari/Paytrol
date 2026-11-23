@@ -41,6 +41,7 @@ export default function ResultPage() {
 
   const handleDone = () => {
     sessionStorage.removeItem('paytrol_verified');
+    sessionStorage.removeItem('paytrol_verified_v2');
     sessionStorage.removeItem('paytrol_photoURL');
     sessionStorage.removeItem('paytrol_tripResult');
     sessionStorage.removeItem('paytrol_manualEntry');

@@ -6,7 +6,7 @@ export interface UserProfile {
   photoURL: string | null;
   defaultFuelType: 'petrol' | 'diesel' | 'cng';
   currency: string;        // e.g. "INR"
-  lastFuelPrice: number;   // e.g. 105.00
+  lastFuelPrice: number;
   createdAt: string;       // ISO date
   updatedAt: string;
 }

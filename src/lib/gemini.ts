@@ -31,11 +31,11 @@ export async function extractDashboardReadings(
 
 1. **Trip Distance** (in km):
    - Look specifically for the trip distance under "Since start", "Since refuel", "Trip A", or "Trip".
-   - In digital clusters (like VAG/VW/Skoda/Audi/Hyundai/Kia/Tata), this is usually near the top/center of the dial or info card (e.g., "0:35 h", "6 km").
-   - DO NOT confuse with the total odometer (e.g. 66639 km) or estimated distance to empty / range (e.g. 460 km).
+   - In digital clusters, this is usually near the top/center of the dial or info card.
+   - DO NOT confuse it with the total odometer or estimated distance to empty / range.
 
 2. **Average Fuel Economy / Mileage** (in km/l or l/100km):
-   - Look for "Avg." or "Average" alongside a fuel pump symbol or fuel dispenser icon (e.g. "Avg. 5.8 km/l").
+   - Look for "Avg." or "Average" alongside a fuel pump symbol or fuel dispenser icon.
    - If in l/100km, convert to km/l (km/l = 100 / value).
    - If in mpg, convert to km/l (km/l = mpg * 0.425144).
 
@@ -83,13 +83,8 @@ Respond ONLY with valid JSON conforming to this schema (no extra explanation, no
     };
   } catch (err: unknown) {
     console.error('Gemini vision extraction failed:', err);
-    // Return graceful fallback so user can still edit on the mandatory Verification Gate
-    return {
-      distance_km: 6.0,
-      avg_mileage_kmpl: 5.8,
-      confidence_distance: 'low',
-      confidence_mileage: 'low',
-      raw_text: 'Fallback values applied due to AI parsing error. Please verify and edit manually.',
-    };
+    throw new Error('Could not extract dashboard readings. Please try again or enter trip details manually.', {
+      cause: err,
+    });
   }
 }

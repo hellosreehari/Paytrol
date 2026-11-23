@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CameraCapture from '@/components/CameraCapture';
 import { useTripStore } from '@/stores/tripStore';
@@ -26,10 +26,24 @@ export default function CapturePage() {
   const [distanceKm, setDistanceKm] = useState('');
   const [avgMileageKmpl, setAvgMileageKmpl] = useState('');
   const [fuelPrice, setFuelPrice] = useState(
-    profile?.lastFuelPrice ? String(profile.lastFuelPrice) : '105'
+    profile?.lastFuelPrice ? String(profile.lastFuelPrice) : ''
   );
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    sessionStorage.removeItem('paytrol_verified');
+    sessionStorage.removeItem('paytrol_verified_v2');
+    sessionStorage.removeItem('paytrol_photoURL');
+    sessionStorage.removeItem('paytrol_tripResult');
+    sessionStorage.removeItem('paytrol_manualEntry');
+  }, []);
+
+  useEffect(() => {
+    if (profile?.lastFuelPrice) {
+      setFuelPrice((current) => current || String(profile.lastFuelPrice));
+    }
+  }, [profile?.lastFuelPrice]);
 
   const handleCapture = async (file: File) => {
     sessionStorage.removeItem('paytrol_manualEntry');
@@ -179,7 +193,7 @@ export default function CapturePage() {
                 required
                 value={distanceKm}
                 onChange={(event) => setDistanceKm(event.target.value)}
-                placeholder="e.g. 6"
+                placeholder="Enter distance"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base font-semibold text-slate-900 outline-none focus:border-slate-400"
               />
             </label>
@@ -195,7 +209,7 @@ export default function CapturePage() {
                 required
                 value={avgMileageKmpl}
                 onChange={(event) => setAvgMileageKmpl(event.target.value)}
-                placeholder="e.g. 5.8"
+                placeholder="Enter mileage"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base font-semibold text-slate-900 outline-none focus:border-slate-400"
               />
             </label>
@@ -244,7 +258,7 @@ export default function CapturePage() {
             <p className="text-xs text-indigo-300 mt-1">{statusMessage}</p>
           </div>
           <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-            Distinguishing trip odometer (e.g. 6 km under &quot;Since start&quot;) from total odometer (66639 km) and range (460 km).
+            Distinguishing the trip distance from the total odometer and estimated range.
           </p>
         </div>
       ) : (

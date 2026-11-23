@@ -51,7 +51,7 @@ const initialState = {
   extractionError: null,
   distanceKm: 0,
   avgMileageKmpl: 0,
-  fuelPricePerLiter: 105.0,
+  fuelPricePerLiter: 0,
   fuelUsedLiters: 0,
   totalCost: 0,
   selectedFriends: [],
@@ -71,7 +71,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   setPhotoPreviewUrl: (url: string) => set({ photoPreviewUrl: url }),
 
   setExtraction: (result: ExtractionResult) => {
-    const fuelPrice = get().fuelPricePerLiter || 105.0;
+    const fuelPrice = get().fuelPricePerLiter;
     const distanceKm = result.distanceKm;
     const avgMileageKmpl = result.avgMileageKmpl;
     const fuelUsed = avgMileageKmpl > 0 ? distanceKm / avgMileageKmpl : 0;
