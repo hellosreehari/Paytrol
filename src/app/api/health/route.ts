@@ -29,7 +29,7 @@ export async function GET() {
       ? await check(pingDatabase, 'Connected to Azure Cosmos DB')
       : storageMode === 'memory'
         ? { status: 'warning', detail: 'Using the temporary in-memory store: data is lost on restart' }
-        : { status: 'error', detail: 'COSMOS_ENDPOINT / COSMOS_KEY are not set' };
+        : { status: 'error', detail: 'AZURE_COSMOS_CONNECTIONSTRING (or COSMOS_ENDPOINT / COSMOS_KEY) is not set' };
 
   const photos: Check = hasBlobConfig()
     ? await check(pingBlobStorage, 'Connected to Azure Blob Storage')
