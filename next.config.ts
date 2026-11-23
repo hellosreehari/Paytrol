@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Self-contained server bundle (.next/standalone) so deploys don't ship node_modules.
   output: 'standalone',
+  // Baked in at build time so /api/health can say which commit is running.
+  env: { BUILD_SHA: process.env.GITHUB_SHA || 'dev' },
   allowedDevOrigins: ['192.168.1.11', 'localhost'],
   // Security headers (previously only in staticwebapp.config.json, which App Service ignores).
   async headers() {
