@@ -48,7 +48,7 @@ export async function GET() {
   const healthy = Object.values(checks).every((c) => c.status !== 'error');
 
   return NextResponse.json(
-    { status: healthy ? 'ok' : 'error', checks },
+    { status: healthy ? 'ok' : 'error', version: process.env.BUILD_SHA || 'dev', checks },
     { status: healthy ? 200 : 503, headers: { 'Cache-Control': 'no-store' } }
   );
 }

@@ -84,15 +84,24 @@ jobs:
 
       # Fails the run if the app can't reach its database, photo storage,
       # Gemini or sign-in config. Open /api/health in a browser for details.
+      # It first waits until the new build is the one answering: right after a
+      # deploy, App Service can keep serving the previous build for a while.
       - name: Health check
         env:
           APP_URL: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+          EXPECTED_VERSION: ${{ github.sha }}
         run: |
-          for attempt in $(seq 1 20); do
+          for attempt in $(seq 1 40); do
             code=$(curl -s -o health.json -w '%{http_code}' "$APP_URL/api/health" || true)
-            if [ "$code" = "200" ]; then cat health.json; exit 0; fi
-            if [ "$code" = "503" ]; then echo "Health check reported a problem:"; cat health.json; exit 1; fi
-            echo "Attempt $attempt: HTTP $code, waiting for the app to start..."
-            sleep 15
+            version=$(jq -r '.version // empty' health.json 2>/dev/null || true)
+            if [ "$version" != "$EXPECTED_VERSION" ]; then
+              echo "Attempt $attempt: HTTP $code, still serving ${version:-the previous build}; waiting for $EXPECTED_VERSION..."
+              sleep 15
+              continue
+            fi
+            cat health.json
+            if [ "$code" = "200" ]; then exit 0; fi
+            echo "::error::Health check reported a problem (HTTP $code)"
+            exit 1
           done
-          echo "App did not become healthy in time"; exit 1
+          echo "::error::The new build did not start serving within 10 minutes"; exit 1
