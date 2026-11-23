@@ -11,7 +11,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@azure/cosmos": "^4.10.2",
     "@azure/storage-blob": "^12.34.0",
     "@google/generative-ai": "^0.24.1",
     "heic2any": "^0.0.4",

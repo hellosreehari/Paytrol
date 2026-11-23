@@ -5,7 +5,7 @@ import {
   getDocument,
   queryDocuments,
   updateDocument,
-} from '@/lib/cosmos';
+} from '@/lib/db';
 import { roundMoney } from '@/lib/money';
 import type { Balance, GuestContact, Trip, TripParticipant, UserProfile } from '@/types';
 
@@ -28,8 +28,6 @@ export async function linkGuestContact(
 
   const trips = await queryDocuments<Trip>(
     'trips',
-    'SELECT * FROM c WHERE ARRAY_CONTAINS(c.participants, {"uid": @uid}, true)',
-    [{ name: '@uid', value: contact.guestUid }],
     { participants: { $elemMatch: { uid: contact.guestUid } } }
   );
 
@@ -108,8 +106,6 @@ export async function renameGuestContact(contact: GuestContact, name: string) {
 
   const trips = await queryDocuments<Trip>(
     'trips',
-    'SELECT * FROM c WHERE ARRAY_CONTAINS(c.participants, {"guestContactId": @contactId}, true)',
-    [{ name: '@contactId', value: contact.id }],
     { participants: { $elemMatch: { guestContactId: contact.id } } }
   );
   for (const trip of trips) {
@@ -139,8 +135,6 @@ export async function linkGuestContactsForUser(
 
   const contacts = await queryDocuments<GuestContact>(
     'guests',
-    'SELECT * FROM c WHERE c.email = @email AND (NOT IS_DEFINED(c.linkedUid) OR c.linkedUid = null)',
-    [{ name: '@email', value: email }],
     { email, linkedUid: null }
   );
 

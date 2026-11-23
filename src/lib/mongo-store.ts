@@ -4,8 +4,7 @@ import { MongoClient, MongoServerError, type Collection, type Db, type Document,
 /**
  * Storage backend for Azure Cosmos DB for MongoDB (or any MongoDB). Documents
  * keep the app's own `id` field and use the same value as `_id`. `_version`
- * is a token that changes on every write, used for optimistic concurrency
- * like Cosmos NoSQL's _etag. Neither internal field is returned to callers.
+ * is a token that changes on every write, used for optimistic concurrency. Neither internal field is returned to callers.
  */
 
 export function isMongoConnectionString(value: string | undefined): boolean {
@@ -56,7 +55,6 @@ function byId(id: string): Filter<Document> {
 
 function toStored<T extends { id: string }>(doc: T): Document {
   const copy = JSON.parse(JSON.stringify(doc)) as Record<string, unknown>;
-  delete copy._etag;
   delete copy._version;
   return { ...copy, _id: doc.id, _version: randomUUID() } as Document;
 }
@@ -170,7 +168,9 @@ export class MongoStore {
           if (!isDuplicateKey(e)) throw e;
         }
       }
-      // Someone else changed or created it first: retry with the fresh copy.
+      // Someone else changed or created it first: retry with the fresh copy
+      // after a short random pause so competing writers spread out.
+      if (attempt < maxAttempts) await new Promise((resolve) => setTimeout(resolve, Math.random() * 25 * attempt));
     }
     throw new Error(`Could not update ${name}/${id}: too many concurrent changes`);
   }

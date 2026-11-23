@@ -8,7 +8,7 @@ import {
   queryDocuments,
   updateDocument,
   equalsIgnoreCase,
-} from '@/lib/cosmos';
+} from '@/lib/db';
 import {
   getGuestUid,
   linkGuestContact,
@@ -33,9 +33,8 @@ export async function GET() {
 
     const guests = await queryDocuments<GuestContact>(
       'guests',
-      'SELECT * FROM c WHERE c.ownerUid = @ownerUid ORDER BY c.createdAt DESC',
-      [{ name: '@ownerUid', value: ownerUid }],
-      { ownerUid }
+      { ownerUid },
+      { newestFirst: true }
     );
     return NextResponse.json({ success: true, data: guests });
   } catch (error: unknown) {
@@ -65,8 +64,6 @@ export async function POST(req: NextRequest) {
 
     const existingGuests = await queryDocuments<GuestContact>(
       'guests',
-      'SELECT * FROM c WHERE c.ownerUid = @ownerUid',
-      [{ name: '@ownerUid', value: ownerUid }],
       { ownerUid }
     );
     if (existingGuests.some((guest) => guest.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
@@ -145,8 +142,6 @@ export async function PATCH(req: NextRequest) {
 
     const duplicateName = (await queryDocuments<GuestContact>(
       'guests',
-      'SELECT * FROM c WHERE c.ownerUid = @ownerUid',
-      [{ name: '@ownerUid', value: ownerUid }],
       { ownerUid }
     )).some((other) => other.id !== guest.id && other.name.toLocaleLowerCase() === name.toLocaleLowerCase());
     if (duplicateName) {
@@ -159,8 +154,6 @@ export async function PATCH(req: NextRequest) {
     if (email && !guest.linkedUid) {
       const users = await queryDocuments<UserProfile>(
         'users',
-        'SELECT * FROM c WHERE LOWER(c.email) = @email',
-        [{ name: '@email', value: email }],
         { email: equalsIgnoreCase(email) }
       );
       const matchingUser = users.find((user) => user.id !== ownerUid);
@@ -210,8 +203,6 @@ export async function DELETE(req: NextRequest) {
     };
     const trips = await queryDocuments<Trip>(
       'trips',
-      'SELECT * FROM c WHERE ARRAY_CONTAINS(c.participants, {"guestContactId": @contactId}, true)',
-      [{ name: '@contactId', value: guest.id }],
       { participants: { $elemMatch: { guestContactId: guest.id } } }
     );
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createDocument, equalsIgnoreCase, queryDocuments } from './cosmos';
+import { createDocument, equalsIgnoreCase, queryDocuments } from './db';
 import { getAcceptedFriendUids } from './ledger';
 
-// No database settings are set in tests, so this runs on the in-memory store,
+// No database is configured in tests, so this runs on the in-memory store,
 // which evaluates the same MongoDB filters production uses.
 describe('in-memory store queries', () => {
   it('only counts accepted friendships as friends', async () => {
@@ -17,9 +17,8 @@ describe('in-memory store queries', () => {
     await createDocument('mem_users', { id: 'u3', email: 'pat@example.co', createdAt: '2026-03-01T00:00:00Z' });
     const found = await queryDocuments<{ id: string }>(
       'mem_users',
-      'SELECT * FROM c WHERE LOWER(c.email) = @email ORDER BY c.createdAt DESC',
-      [],
-      { email: equalsIgnoreCase('pat@example.com') }
+      { email: equalsIgnoreCase('pat@example.com') },
+      { newestFirst: true }
     );
     expect(found.map((u) => u.id)).toEqual(['u2', 'u1']);
   });
