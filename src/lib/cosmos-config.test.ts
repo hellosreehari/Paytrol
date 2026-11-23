@@ -17,10 +17,12 @@ describe('Cosmos configuration', () => {
     expect(m.getStorageMode()).toBe('cosmos');
   });
 
-  it('explains a MongoDB connection string', async () => {
-    const m = await load({ NODE_ENV: 'production', AZURE_COSMOS_CONNECTIONSTRING: 'mongodb://acct:pw@host:10255/' });
-    expect(m.getStorageMode()).toBe('unconfigured');
-    expect(m.describeCosmosConfigProblem()).toMatch(/MongoDB/);
+  it('uses the MongoDB backend for a mongodb:// connection string', async () => {
+    const m = await load({
+      NODE_ENV: 'production',
+      AZURE_COSMOS_CONNECTIONSTRING: 'mongodb://acct:pw@acct.mongo.cosmos.azure.com:10255/?ssl=true',
+    });
+    expect(m.getStorageMode()).toBe('mongo');
   });
 
   it('explains a connection string without a key', async () => {

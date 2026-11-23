@@ -190,7 +190,8 @@ export async function GET() {
     const trips = await queryDocuments<Trip>(
       'trips',
       'SELECT * FROM c WHERE c.creatorUid = @uid OR ARRAY_CONTAINS(c.participants, {"uid": @uid}, true) ORDER BY c.createdAt DESC',
-      [{ name: '@uid', value: uid }]
+      [{ name: '@uid', value: uid }],
+      { $or: [{ creatorUid: uid }, { participants: { $elemMatch: { uid } } }] }
     );
 
     // Dashboard photos are kept for 7 days. The scheduled cleanup route does the

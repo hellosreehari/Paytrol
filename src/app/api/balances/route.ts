@@ -18,7 +18,8 @@ export async function GET() {
     const balances = await queryDocuments<Balance>(
       'balances',
       'SELECT * FROM c WHERE c.uid1 = @uid OR c.uid2 = @uid',
-      [{ name: '@uid', value: uid }]
+      [{ name: '@uid', value: uid }],
+      { $or: [{ uid1: uid }, { uid2: uid }] }
     );
 
     // Normalize from the current user's perspective:

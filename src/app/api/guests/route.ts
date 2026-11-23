@@ -7,6 +7,7 @@ import {
   getDocument,
   queryDocuments,
   updateDocument,
+  equalsIgnoreCase,
 } from '@/lib/cosmos';
 import {
   getGuestUid,
@@ -33,7 +34,8 @@ export async function GET() {
     const guests = await queryDocuments<GuestContact>(
       'guests',
       'SELECT * FROM c WHERE c.ownerUid = @ownerUid ORDER BY c.createdAt DESC',
-      [{ name: '@ownerUid', value: ownerUid }]
+      [{ name: '@ownerUid', value: ownerUid }],
+      { ownerUid }
     );
     return NextResponse.json({ success: true, data: guests });
   } catch (error: unknown) {
@@ -64,7 +66,8 @@ export async function POST(req: NextRequest) {
     const existingGuests = await queryDocuments<GuestContact>(
       'guests',
       'SELECT * FROM c WHERE c.ownerUid = @ownerUid',
-      [{ name: '@ownerUid', value: ownerUid }]
+      [{ name: '@ownerUid', value: ownerUid }],
+      { ownerUid }
     );
     if (existingGuests.some((guest) => guest.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
       return NextResponse.json(
@@ -143,7 +146,8 @@ export async function PATCH(req: NextRequest) {
     const duplicateName = (await queryDocuments<GuestContact>(
       'guests',
       'SELECT * FROM c WHERE c.ownerUid = @ownerUid',
-      [{ name: '@ownerUid', value: ownerUid }]
+      [{ name: '@ownerUid', value: ownerUid }],
+      { ownerUid }
     )).some((other) => other.id !== guest.id && other.name.toLocaleLowerCase() === name.toLocaleLowerCase());
     if (duplicateName) {
       return NextResponse.json({ success: false, error: 'A guest with that name already exists.' }, { status: 409 });
@@ -156,7 +160,8 @@ export async function PATCH(req: NextRequest) {
       const users = await queryDocuments<UserProfile>(
         'users',
         'SELECT * FROM c WHERE LOWER(c.email) = @email',
-        [{ name: '@email', value: email }]
+        [{ name: '@email', value: email }],
+        { email: equalsIgnoreCase(email) }
       );
       const matchingUser = users.find((user) => user.id !== ownerUid);
       if (matchingUser) {
@@ -206,7 +211,8 @@ export async function DELETE(req: NextRequest) {
     const trips = await queryDocuments<Trip>(
       'trips',
       'SELECT * FROM c WHERE ARRAY_CONTAINS(c.participants, {"guestContactId": @contactId}, true)',
-      [{ name: '@contactId', value: guest.id }]
+      [{ name: '@contactId', value: guest.id }],
+      { participants: { $elemMatch: { guestContactId: guest.id } } }
     );
 
     for (const trip of trips) {

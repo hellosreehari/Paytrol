@@ -27,6 +27,8 @@ export async function GET() {
   const database: Check =
     storageMode === 'cosmos'
       ? await check(pingDatabase, 'Connected to Azure Cosmos DB')
+      : storageMode === 'mongo'
+        ? await check(pingDatabase, 'Connected to Azure Cosmos DB for MongoDB')
       : storageMode === 'memory'
         ? { status: 'warning', detail: 'Using the temporary in-memory store: data is lost on restart' }
         : { status: 'error', detail: describeCosmosConfigProblem() };

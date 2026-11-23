@@ -61,7 +61,8 @@ export async function getAcceptedFriendUids(uid: string): Promise<Set<string>> {
     [
       { name: '@status', value: 'accepted' },
       { name: '@uid', value: uid },
-    ]
+    ],
+    { status: 'accepted', $or: [{ fromUid: uid }, { toUid: uid }] }
   );
   const friends = new Set<string>();
   for (const relationship of relationships) {

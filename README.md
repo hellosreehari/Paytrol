@@ -22,11 +22,11 @@ Paytrol runs on **Azure App Service (Linux, Node 24)** and deploys from GitHub A
 | `NEXTAUTH_URL` | yes | e.g. `https://paytrol.azurewebsites.net` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | yes | Google OAuth client |
 | `GEMINI_API_KEY` | yes | Google AI Studio key; optional `GEMINI_MODEL` (default `gemini-2.5-flash`) |
-| `AZURE_COSMOS_CONNECTIONSTRING` (or `COSMOS_ENDPOINT` + `COSMOS_KEY`) | yes | Cosmos DB for NoSQL, key-based connection string; database `COSMOS_DATABASE` (default `paytrol`) is created automatically |
+| `AZURE_COSMOS_CONNECTIONSTRING` (or `COSMOS_ENDPOINT` + `COSMOS_KEY`) | yes | Cosmos DB for NoSQL, key-based NoSQL connection string or a `mongodb://` one (Cosmos DB for MongoDB); database `COSMOS_DATABASE` (default `paytrol`) is created automatically |
 | `AZURE_STORAGE_CONNECTION_STRING` | recommended | photos go to the private `dashboard-photos` container; without it photos are stored inside trips |
 | `CRON_SECRET` | recommended | protects `/api/retention/cleanup` |
 
-The connection string can live in either the **App settings** or the **Connection strings** tab (type DocDb or Custom); it must be the key-based Cosmos DB for NoSQL string (`AccountEndpoint=...;AccountKey=...`), not a MongoDB one. If a deploy fails its health check, `/api/health` names the exact problem.
+The connection string can live in either the **App settings** or the **Connection strings** tab (type DocDb or Custom); it can be either a Cosmos DB for NoSQL string (`AccountEndpoint=...;AccountKey=...`) or a Cosmos DB for MongoDB string (`mongodb://...`). Both use the database `COSMOS_DATABASE` (default `paytrol`). If a deploy fails its health check, `/api/health` names the exact problem.
 
 Without the Cosmos settings the app refuses to save data in production rather than silently keeping it in memory
 (set `ALLOW_MEMORY_STORE=true` only for a throwaway demo).

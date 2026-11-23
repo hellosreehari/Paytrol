@@ -1,4 +1,8 @@
 import { CosmosClient, Database, Container, SqlParameter } from '@azure/cosmos';
+import type { Document, Filter } from 'mongodb';
+import { isMongoConnectionString, MongoStore } from './mongo-store';
+
+export { equalsIgnoreCase } from './mongo-store';
 
 /**
  * Parse a Cosmos connection string ("AccountEndpoint=https://...;AccountKey=...;")
@@ -48,6 +52,18 @@ const endpoint = process.env.COSMOS_ENDPOINT || connectionStringConfig.endpoint;
 const key = process.env.COSMOS_KEY || connectionStringConfig.key;
 const databaseId = process.env.COSMOS_DATABASE || 'paytrol';
 
+// Azure Cosmos DB for MongoDB gives a mongodb:// connection string instead.
+const rawConnectionString = connectionStringVariable ? process.env[connectionStringVariable]?.trim() : undefined;
+const mongoUri =
+  rawConnectionString && isMongoConnectionString(rawConnectionString.replace(/^(['"])(.*)\1$/, '$2'))
+    ? rawConnectionString.replace(/^(['"])(.*)\1$/, '$2')
+    : undefined;
+let mongoStore: MongoStore | null = null;
+function getMongoStore(): MongoStore {
+  if (!mongoStore) mongoStore = new MongoStore(mongoUri as string, databaseId);
+  return mongoStore;
+}
+
 let client: CosmosClient | null = null;
 let databasePromise: Promise<Database> | null = null;
 const containerPromises = new Map<string, Promise<Container>>();
@@ -71,9 +87,6 @@ export function describeCosmosConfigProblem(): string {
   }
   if (connectionStringVariable) {
     const raw = process.env[connectionStringVariable] ?? '';
-    if (/^mongodb(\+srv)?:\/\//i.test(raw.trim())) {
-      return `${connectionStringVariable} is a MongoDB connection string; the app needs the Cosmos DB for NoSQL one (AccountEndpoint=...;AccountKey=...)`;
-    }
     if (raw.trim().startsWith('@Microsoft.KeyVault')) {
       return `${connectionStringVariable} is an unresolved Key Vault reference; check the app's access to the vault`;
     }
@@ -115,14 +128,16 @@ export class StorageNotConfiguredError extends Error {
   }
 }
 
-export function getStorageMode(): 'cosmos' | 'memory' | 'unconfigured' {
+export function getStorageMode(): 'cosmos' | 'mongo' | 'memory' | 'unconfigured' {
+  if (mongoUri && !process.env.COSMOS_ENDPOINT) return 'mongo';
   if (isAzureCosmosConfigured()) return 'cosmos';
   return isMemoryStoreAllowed() ? 'memory' : 'unconfigured';
 }
 
-function hasAzureCosmosConfig(): boolean {
-  const configured = isAzureCosmosConfigured();
-  if (configured) return true;
+/** Which store to use for this call; throws when production has none. */
+function backend(): 'cosmos' | 'mongo' | 'memory' {
+  const mode = getStorageMode();
+  if (mode === 'cosmos' || mode === 'mongo') return mode;
   if (!isMemoryStoreAllowed()) {
     if (!warnedAboutMemoryStore) {
       warnedAboutMemoryStore = true;
@@ -136,12 +151,14 @@ function hasAzureCosmosConfig(): boolean {
       '[cosmos] Using the in-memory store (ALLOW_MEMORY_STORE=true): all data will be lost when the server restarts.'
     );
   }
-  return false;
+  return 'memory';
 }
 
 /** Cheap connectivity check for the health endpoint. */
 export async function pingDatabase(): Promise<void> {
-  if (!isAzureCosmosConfigured()) return;
+  const mode = getStorageMode();
+  if (mode === 'mongo') return getMongoStore().ping();
+  if (mode !== 'cosmos') return;
   const db = await getDatabase();
   await db.read();
 }
@@ -190,7 +207,9 @@ function getContainer(containerId: string): Promise<Container> {
 // ── Generic CRUD with Azure Cosmos DB & in-memory fallback ──
 
 export async function createDocument<T extends { id: string }>(containerId: string, doc: T): Promise<T> {
-  if (!hasAzureCosmosConfig()) {
+  const mode = backend();
+  if (mode === 'mongo') return getMongoStore().create(containerId, doc);
+  if (mode === 'memory') {
     if (!memoryStore[containerId]) memoryStore[containerId] = new Map();
     memoryStore[containerId].set(doc.id, JSON.parse(JSON.stringify(doc)));
     return doc;
@@ -202,7 +221,9 @@ export async function createDocument<T extends { id: string }>(containerId: stri
 }
 
 export async function getDocument<T>(containerId: string, id: string): Promise<T | null> {
-  if (!hasAzureCosmosConfig()) {
+  const mode = backend();
+  if (mode === 'mongo') return getMongoStore().get<T>(containerId, id);
+  if (mode === 'memory') {
     const map = memoryStore[containerId];
     if (!map) return null;
     const doc = map.get(id);
@@ -220,7 +241,9 @@ export async function getDocument<T>(containerId: string, id: string): Promise<T
 }
 
 export async function updateDocument<T extends { id: string }>(containerId: string, doc: T): Promise<T> {
-  if (!hasAzureCosmosConfig()) {
+  const mode = backend();
+  if (mode === 'mongo') return getMongoStore().update(containerId, doc);
+  if (mode === 'memory') {
     if (!memoryStore[containerId]) memoryStore[containerId] = new Map();
     memoryStore[containerId].set(doc.id, JSON.parse(JSON.stringify(doc)));
     return doc;
@@ -232,7 +255,9 @@ export async function updateDocument<T extends { id: string }>(containerId: stri
 }
 
 export async function deleteDocument(containerId: string, id: string): Promise<void> {
-  if (!hasAzureCosmosConfig()) {
+  const mode = backend();
+  if (mode === 'mongo') return getMongoStore().delete(containerId, id);
+  if (mode === 'memory') {
     const map = memoryStore[containerId];
     if (map) map.delete(id);
     return;
@@ -242,12 +267,22 @@ export async function deleteDocument(containerId: string, id: string): Promise<v
   await container.item(id, id).delete();
 }
 
+/**
+ * Query a container. `query` is Cosmos SQL (used with Cosmos DB for NoSQL);
+ * `mongoFilter` is the same query as a MongoDB filter (used with Cosmos DB
+ * for MongoDB). Both must select the same documents.
+ */
 export async function queryDocuments<T>(
   containerId: string,
   query: string,
-  parameters?: { name: string; value: unknown }[]
+  parameters: { name: string; value: unknown }[] | undefined,
+  mongoFilter: Filter<Document>
 ): Promise<T[]> {
-  if (!hasAzureCosmosConfig()) {
+  const mode = backend();
+  if (mode === 'mongo') {
+    return getMongoStore().query<T>(containerId, mongoFilter, /ORDER BY c\.createdAt DESC/i.test(query));
+  }
+  if (mode === 'memory') {
     const map = memoryStore[containerId];
     if (!map) return [];
     let items = Array.from(map.values()) as Record<string, unknown>[];
@@ -330,7 +365,9 @@ export async function upsertDocumentAtomically<T extends { id: string }>(
   mutate: (current: T | null) => T | null,
   maxAttempts = 5
 ): Promise<T | null> {
-  if (!hasAzureCosmosConfig()) {
+  const mode = backend();
+  if (mode === 'mongo') return getMongoStore().upsertAtomically(containerId, id, mutate, maxAttempts);
+  if (mode === 'memory') {
     const current = await getDocument<T>(containerId, id);
     const next = mutate(current);
     if (!next) return current;
