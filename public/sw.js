@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paytrol-v2';
+const CACHE_NAME = 'paytrol-v3';
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',

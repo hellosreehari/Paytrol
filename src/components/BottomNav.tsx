@@ -16,7 +16,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-xl border-t border-line pb-safe">
       <div className="flex items-center justify-around max-w-md mx-auto px-2 pt-2 pb-1.5">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -32,13 +32,13 @@ export default function BottomNav() {
                   className={cn(
                     'w-12 h-12 rounded-2xl flex items-center justify-center transition-transform active:scale-95 border',
                     isActive
-                      ? 'bg-indigo-500 border-indigo-400 text-white'
-                      : 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500'
+                      ? 'bg-primary border-primary text-on-primary'
+                      : 'bg-primary border-primary text-on-primary hover:bg-primary-hover'
                   )}
                 >
                   <item.icon className="w-6 h-6 stroke-[2]" />
                 </div>
-                <span className="text-[10px] font-semibold tracking-wide text-slate-300 mt-1">
+                <span className="text-[10px] font-semibold tracking-wide text-ink-soft mt-1">
                   {item.label}
                 </span>
               </Link>
@@ -52,14 +52,14 @@ export default function BottomNav() {
               className={cn(
                 'flex flex-col items-center py-1 px-3 text-[11px] font-medium transition-all duration-150 rounded-lg',
                 isActive
-                  ? 'text-indigo-400 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'text-primary font-semibold'
+                  : 'text-muted hover:text-ink'
               )}
             >
               <item.icon
                 className={cn(
                   'w-5 h-5 mb-0.5 transition-transform',
-                  isActive ? 'stroke-[2.2] scale-110 text-indigo-400' : 'stroke-[1.6]'
+                  isActive ? 'stroke-[2.2] scale-110 text-primary' : 'stroke-[1.6]'
                 )}
               />
               <span>{item.label}</span>

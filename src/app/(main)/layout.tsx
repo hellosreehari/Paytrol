@@ -21,10 +21,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa]">
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-slate-400">Loading Paytrol...</p>
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-muted">Loading Paytrol...</p>
         </div>
       </div>
     );
@@ -35,7 +35,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] text-slate-900 flex flex-col justify-between">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between">
     <main className="flex-1 max-w-md w-full mx-auto px-5 pt-5 pb-28">
         {children}
       </main>
