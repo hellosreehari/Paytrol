@@ -43,6 +43,9 @@ wrangler.jsonc
 .dev.vars*
 !.dev.vars.example
 **/.orun/
+.claude/
+.cursor/
+.github/skills/
 
 # typescript
 *.tsbuildinfo
