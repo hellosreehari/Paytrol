@@ -13,7 +13,9 @@ import {
   linkGuestContact,
   renameGuestContact,
 } from '@/lib/guest-linking';
-import type { Balance, GuestContact, Trip, TripParticipant, UserProfile } from '@/types';
+import type { GuestContact, Trip, TripParticipant, UserProfile } from '@/types';
+import { splitEqually } from '@/lib/money';
+import { adjustBalance, getBalanceKey } from '@/lib/ledger';
 import { generateId } from '@/lib/utils';
 
 async function getOwnerUid() {
@@ -195,6 +197,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     const guestUid = guest.linkedUid || guest.guestUid;
+    const ownerProfile = await getDocument<UserProfile>('users', ownerUid);
+    const owner = {
+      uid: ownerUid,
+      name: ownerProfile?.displayName || 'Driver',
+      photo: ownerProfile?.photoURL ?? null,
+    };
     const trips = await queryDocuments<Trip>(
       'trips',
       'SELECT * FROM c WHERE ARRAY_CONTAINS(c.participants, {"guestContactId": @contactId}, true)',
@@ -202,45 +210,57 @@ export async function DELETE(req: NextRequest) {
     );
 
     for (const trip of trips) {
+      if (trip.creatorUid !== ownerUid) continue;
       const oldParticipants = new Map(
-        trip.participants.map((participant) => [participant.uid, participant.shareAmount || 0])
+        trip.participants.map((participant) => [participant.uid, participant])
       );
-      const remaining = trip.participants.filter(
-        (participant) => participant.guestContactId !== guest.id && participant.uid !== guestUid
-      );
-      if (remaining.length === trip.participants.length) continue;
+      const isRemoved = (participant: TripParticipant) =>
+        participant.guestContactId === guest.id || participant.uid === guestUid;
+      const removed = trip.participants.filter(isRemoved);
+      const remaining = trip.participants.filter((participant) => !isRemoved(participant));
+      if (removed.length === 0) continue;
 
-      const participantCount = remaining.length;
-      const totalCents = Math.round(trip.totalCost * 100);
-      const baseCents = participantCount > 0 ? Math.floor(totalCents / participantCount) : 0;
-      const remainingCents = participantCount > 0 ? totalCents % participantCount : 0;
-      trip.participants = remaining.map((participant: TripParticipant, index: number) => ({
+      // The guest's share is spread equally across the people left on the trip.
+      const shares = splitEqually(trip.totalCost, remaining.length);
+      trip.participants = remaining.map((participant, index) => ({
         ...participant,
-        shareAmount:
-          participantCount > 0
-            ? (baseCents + (index < remainingCents ? 1 : 0)) / 100
-            : 0,
+        shareAmount: shares[index],
       }));
       await updateDocument('trips', trip);
 
+      // Remove what the guest owed for this trip. When the guest is linked to a
+      // real account, only this trip's share is reversed, so their balance from
+      // other trips with you is kept.
+      for (const participant of removed) {
+        if (participant.uid === ownerUid) continue;
+        await adjustBalance(
+          owner,
+          { uid: participant.uid, name: participant.displayName, photo: participant.photoURL },
+          -(participant.shareAmount || 0),
+          { createIfMissing: false }
+        );
+      }
       for (const participant of trip.participants) {
         if (participant.uid === ownerUid) continue;
-        const oldShare = oldParticipants.get(participant.uid) || 0;
-        const delta = Math.round((participant.shareAmount - oldShare) * 100) / 100;
-        if (delta === 0) continue;
-        const balanceId: string = [ownerUid, participant.uid].sort().join('_');
-        const balance: Balance | null = await getDocument<Balance>('balances', balanceId);
-        if (!balance) continue;
-        if (balance.uid1 === ownerUid) {
-          balance.netAmount -= delta;
-        } else {
-          balance.netAmount += delta;
-        }
-        await updateDocument('balances', balance);
+        const oldShare = oldParticipants.get(participant.uid)?.shareAmount || 0;
+        await adjustBalance(
+          owner,
+          { uid: participant.uid, name: participant.displayName, photo: participant.photoURL },
+          participant.shareAmount - oldShare,
+          { createIfMissing: false }
+        );
       }
     }
 
-    await deleteDocument('balances', [ownerUid, guestUid].sort().join('_'));
+    // A guest without an account has a balance that only ever came from these
+    // trips, so it can go. A linked guest is a real user: keep their balance.
+    if (!guest.linkedUid) {
+      try {
+        await deleteDocument('balances', getBalanceKey(ownerUid, guest.guestUid));
+      } catch (e: unknown) {
+        if ((e as { code?: number }).code !== 404) throw e;
+      }
+    }
     await deleteDocument('guests', guest.id);
     return NextResponse.json({ success: true, data: { id: guest.id } });
   } catch (error: unknown) {

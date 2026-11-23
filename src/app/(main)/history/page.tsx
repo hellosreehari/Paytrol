@@ -294,6 +294,7 @@ export default function HistoryPage() {
                       <span className="text-lg font-black text-slate-900">{formatCurrency(trip.totalCost)}</span>
                       <span className="text-[10px] text-slate-500 block">{trip.fuelUsedLiters.toFixed(2)} L fuel</span>
                     </div>
+{trip.creatorUid === currentUserId && (
                     <button
                       type="button"
                       onClick={() => openEdit(trip)}
@@ -316,6 +317,7 @@ export default function HistoryPage() {
                         />
                       </svg>
                     </button>
+                    )}
                   </div>
                 </div>
 

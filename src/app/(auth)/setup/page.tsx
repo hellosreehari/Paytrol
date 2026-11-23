@@ -12,6 +12,21 @@ const fuelTypes = [
 ] as const;
 
 export default function SetupPage() {
+  const { isLoading, profile } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Remount the form once the profile is known so its fields start from saved values.
+  return <SetupForm key={profile?.id ?? 'new'} />;
+}
+
+function SetupForm() {
   const { user, profile, updateProfile } = useAuth();
   const router = useRouter();
   const fuelPriceId = useId();

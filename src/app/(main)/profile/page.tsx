@@ -26,7 +26,6 @@ export default function ProfilePage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setSavedSuccess(false);
 
     const lastFuelPrice = Number(fuelPrice);
@@ -35,6 +34,7 @@ export default function ProfilePage() {
       return;
     }
 
+    setSaving(true);
     setSaveError(null);
     const success = await updateProfile({
       defaultFuelType: fuelType,
@@ -46,6 +46,8 @@ export default function ProfilePage() {
     if (success) {
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
+    } else {
+      setSaveError('Could not save your preferences. Please try again.');
     }
   };
 

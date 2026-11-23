@@ -1,4 +1,34 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType, type ResponseSchema } from '@google/generative-ai';
+
+// gemini-1.5-* models have been retired. Override with GEMINI_MODEL if needed.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+const CONFIDENCE: ResponseSchema = {
+  type: SchemaType.STRING,
+  format: 'enum',
+  enum: ['high', 'medium', 'low'],
+};
+
+const responseSchema: ResponseSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    distance_km: { type: SchemaType.NUMBER },
+    avg_mileage_kmpl: { type: SchemaType.NUMBER },
+    confidence_distance: CONFIDENCE,
+    confidence_mileage: CONFIDENCE,
+    raw_text: { type: SchemaType.STRING },
+  },
+  required: ['distance_km', 'avg_mileage_kmpl', 'confidence_distance', 'confidence_mileage', 'raw_text'],
+};
+
+function normalizeConfidence(value: unknown): 'high' | 'medium' | 'low' {
+  return value === 'high' || value === 'medium' || value === 'low' ? value : 'medium';
+}
+
+function positiveNumber(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
 
 export interface DashboardExtraction {
   distance_km: number;
@@ -24,8 +54,14 @@ export async function extractDashboardReadings(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Support gemini-2.5-flash or gemini-1.5-flash
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_MODEL,
+    generationConfig: {
+      temperature: 0,
+      responseMimeType: 'application/json',
+      responseSchema,
+    },
+  });
 
   const prompt = `You are an expert computer vision assistant analyzing a car dashboard / digital instrument cluster photo to extract EXACTLY two trip figures:
 
@@ -72,14 +108,14 @@ Respond ONLY with valid JSON conforming to this schema (no extra explanation, no
       throw new Error('AI output did not contain valid JSON: ' + text);
     }
 
-    const parsed = JSON.parse(jsonMatch[0]) as DashboardExtraction;
+    const parsed = JSON.parse(jsonMatch[0]) as Partial<DashboardExtraction>;
 
     return {
-      distance_km: Number(parsed.distance_km) || 0,
-      avg_mileage_kmpl: Number(parsed.avg_mileage_kmpl) || 0,
-      confidence_distance: parsed.confidence_distance || 'medium',
-      confidence_mileage: parsed.confidence_mileage || 'medium',
-      raw_text: parsed.raw_text || '',
+      distance_km: positiveNumber(parsed.distance_km),
+      avg_mileage_kmpl: positiveNumber(parsed.avg_mileage_kmpl),
+      confidence_distance: normalizeConfidence(parsed.confidence_distance),
+      confidence_mileage: normalizeConfidence(parsed.confidence_mileage),
+      raw_text: typeof parsed.raw_text === 'string' ? parsed.raw_text : '',
     };
   } catch (err: unknown) {
     console.error('Gemini vision extraction failed:', err);

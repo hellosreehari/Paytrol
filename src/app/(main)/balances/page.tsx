@@ -233,14 +233,20 @@ export default function BalancesPage() {
                     >
                       {expandedFriendUid === bal.friendUid ? 'Hide split' : 'View split'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSettle(bal.odataId)}
-                      disabled={settlingId === bal.odataId}
-                      className="text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-50"
-                    >
-                      {settlingId === bal.odataId ? 'Saving…' : 'Mark settled'}
-                    </button>
+                    {isOwed || bal.isGuest ? (
+                      <button
+                        type="button"
+                        onClick={() => handleSettle(bal.odataId)}
+                        disabled={settlingId === bal.odataId}
+                        className="text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-50"
+                      >
+                        {settlingId === bal.odataId ? 'Saving…' : 'Mark settled'}
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-slate-500">
+                        {bal.friendName} marks this settled once paid
+                      </span>
+                    )}
                   </div>
 
                   {expandedFriendUid === bal.friendUid && (

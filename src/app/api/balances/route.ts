@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { queryDocuments, getDocument, updateDocument } from '@/lib/cosmos';
-import type { Balance } from '@/types';
+import { createDocument, queryDocuments, upsertDocumentAtomically } from '@/lib/cosmos';
+import { roundMoney } from '@/lib/money';
+import { generateId } from '@/lib/utils';
+import type { Balance, Settlement } from '@/types';
 
 export async function GET() {
   try {
@@ -31,7 +33,7 @@ export async function GET() {
       // uid1 created trip, uid2 owes uid1 `share`, recorded as b.netAmount = -share.
       // So if current user is uid1: netAmount is negative, so amount = -b.netAmount (positive = they owe you).
       // If current user is uid2: amount = b.netAmount (negative = you owe uid1).
-      const amount = isUid1 ? -b.netAmount : b.netAmount;
+      const amount = roundMoney(isUid1 ? -b.netAmount : b.netAmount);
 
       return {
         id: b.odataId,
@@ -66,20 +68,66 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { balanceId } = body;
 
-    if (!balanceId) {
+    if (!balanceId || typeof balanceId !== 'string') {
       return NextResponse.json({ success: false, error: 'Balance ID is required' }, { status: 400 });
     }
 
-    const balance = await getDocument<Balance>('balances', balanceId);
-    if (!balance) {
-      return NextResponse.json({ success: false, error: 'Balance record not found' }, { status: 404 });
-    }
-    if (balance.uid1 !== uid && balance.uid2 !== uid) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    let failure: { error: string; status: number } | null = null;
+    let settledAmount = 0;
+    let debtorUid = '';
+    let otherUidForRecord = '';
+    const updated = await upsertDocumentAtomically<Balance>('balances', balanceId, (balance) => {
+      failure = null;
+      if (!balance) {
+        failure = { error: 'Balance record not found', status: 404 };
+        return null;
+      }
+      if (balance.uid1 !== uid && balance.uid2 !== uid) {
+        failure = { error: 'Forbidden', status: 403 };
+        return null;
+      }
+      // Positive netAmount means uid1 owes uid2. Only the person who is owed
+      // can mark the debt as settled, so nobody can clear their own debt.
+      const amountOwedToMe = roundMoney(balance.uid1 === uid ? -balance.netAmount : balance.netAmount);
+      const otherUid = balance.uid1 === uid ? balance.uid2 : balance.uid1;
+      const otherIsGuest = Boolean(balance.guestUid) && balance.guestUid === otherUid;
+      if (amountOwedToMe < 0 && !otherIsGuest) {
+        failure = {
+          error: 'Only the person who is owed can mark this balance as settled.',
+          status: 403,
+        };
+        return null;
+      }
+      settledAmount = Math.abs(amountOwedToMe);
+      debtorUid = amountOwedToMe >= 0 ? otherUid : uid;
+      otherUidForRecord = otherUid;
+      balance.netAmount = 0;
+      return balance;
+    });
+
+    const rejected = failure as { error: string; status: number } | null;
+    if (rejected) {
+      const { error, status } = rejected;
+      return NextResponse.json({ success: false, error }, { status });
     }
 
-    balance.netAmount = 0;
-    const updated = await updateDocument('balances', balance);
+    // Keep a record of every settlement instead of silently zeroing the balance.
+    if (settledAmount > 0) {
+      const settlement: Settlement = {
+        id: generateId(),
+        balanceId,
+        fromUid: debtorUid,
+        toUid: debtorUid === uid ? otherUidForRecord : uid,
+        amount: settledAmount,
+        recordedBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+      try {
+        await createDocument('settlements', settlement);
+      } catch (e) {
+        console.warn('Could not record settlement:', e);
+      }
+    }
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error: unknown) {

@@ -255,7 +255,7 @@ export default function FriendsPage() {
           </button>
         </div>
         <p className="text-[11px] text-slate-500 px-1">
-          Existing users get an in-app invite; new users get a deep link to install and auto-connect.
+          Existing users see the invite in the app; others see it when they sign in with this email.
         </p>
       </form>
 
@@ -288,7 +288,7 @@ export default function FriendsPage() {
           >
             <span>Sent</span>
             {pendingSent.length > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 font-bold">
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-bold">
                 {pendingSent.length}
               </span>
             )}

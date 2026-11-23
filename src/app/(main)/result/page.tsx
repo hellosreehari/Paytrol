@@ -21,7 +21,19 @@ export default function ResultPage() {
 
   const handleShare = async () => {
     if (!trip) return;
-    const shareText = `🚗 Paytrol Trip Breakdown:\nDistance: ${trip.distanceKm} km\nAvg Mileage: ${trip.avgMileageKmpl} km/L\nFuel Used: ${trip.fuelUsedLiters.toFixed(3)} L\nTotal Cost: ${formatCurrency(trip.totalCost)}\nSplit: ${trip.participants.length} people (${formatCurrency(trip.participants[0]?.shareAmount || 0)} each).`;
+    const shareLines = trip.participants.map((participant) => {
+      const status = participant.uid === trip.creatorUid ? ' (paid for fuel)' : '';
+      return `• ${participant.displayName}: ${formatCurrency(participant.shareAmount)}${status}`;
+    });
+    const shareText = [
+      '🚗 Paytrol Trip Breakdown:',
+      `Distance: ${trip.distanceKm} km`,
+      `Avg Mileage: ${trip.avgMileageKmpl} km/L`,
+      `Fuel Used: ${trip.fuelUsedLiters.toFixed(3)} L`,
+      `Total Cost: ${formatCurrency(trip.totalCost)}`,
+      `Split between ${trip.participants.length} ${trip.participants.length === 1 ? 'person' : 'people'}:`,
+      ...shareLines,
+    ].join('\n');
 
     if (navigator.share) {
       try {

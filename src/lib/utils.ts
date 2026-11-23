@@ -1,3 +1,5 @@
+import { splitEqually } from '@/lib/money';
+
 /**
  * Calculate fuel used in liters
  */
@@ -18,8 +20,7 @@ export function calculateTotalCost(distanceKm: number, avgMileageKmpl: number, f
  * Calculate equal split amount
  */
 export function calculateEqualSplit(totalCost: number, numParticipants: number): number {
-  if (numParticipants <= 0) return 0;
-  return Math.round((totalCost / numParticipants) * 100) / 100;
+  return splitEqually(totalCost, numParticipants)[0] ?? 0;
 }
 
 /**
@@ -139,7 +140,7 @@ export async function compressImage(file: File, maxSizeBytes: number = 1024 * 10
  * Generate a unique ID
  */
 export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  return crypto.randomUUID();
 }
 
 /**
