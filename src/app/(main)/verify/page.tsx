@@ -64,13 +64,13 @@ export default function VerifyPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push('/capture')}
-            className="text-slate-400 hover:text-white p-1 rounded-lg"
+            className="text-muted hover:text-ink p-1 rounded-lg"
           >
             ←
           </button>
-          <h1 className="text-2xl font-black text-white">Verification Screen</h1>
+          <h1 className="text-2xl font-black text-ink">Verification Screen</h1>
         </div>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-muted mt-1">
           Review the AI-extracted readings against your cluster photo before computing fuel cost.
         </p>
       </header>

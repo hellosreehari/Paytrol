@@ -4,11 +4,12 @@ import { useState, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { FUEL_TYPE_ICONS } from '@/components/icons';
 
 const fuelTypes = [
-  { value: 'petrol', label: 'Petrol', icon: '⛽' },
-  { value: 'diesel', label: 'Diesel', icon: '🛢️' },
-  { value: 'cng', label: 'CNG', icon: '💨' },
+  { value: 'petrol', label: 'Petrol', icon: FUEL_TYPE_ICONS.petrol },
+  { value: 'diesel', label: 'Diesel', icon: FUEL_TYPE_ICONS.diesel },
+  { value: 'cng', label: 'CNG', icon: FUEL_TYPE_ICONS.cng },
 ] as const;
 
 export default function SetupPage() {
@@ -17,7 +18,7 @@ export default function SetupPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -77,23 +78,23 @@ function SetupForm() {
             <img
               src={user.image}
               alt={user.name || 'User'}
-              className="w-16 h-16 rounded-full mx-auto border-2 border-indigo-500 shadow-md"
+              className="w-16 h-16 rounded-full mx-auto border-2 border-primary shadow-md"
             />
           ) : (
-            <div             className="w-16 h-16 rounded-2xl bg-[#e3ece6] text-[#315e52] border border-[#bfd0c4] flex items-center justify-center text-xl font-bold mx-auto">
+            <div             className="w-16 h-16 rounded-2xl bg-primary-soft text-primary border border-primary-line flex items-center justify-center text-xl font-bold mx-auto">
               {user?.name?.[0] || 'P'}
             </div>
           )}
-          <h1 className="text-2xl font-bold text-[#1b231f]">
+          <h1 className="text-2xl font-bold text-ink">
             Welcome, {user?.name?.split(' ')[0] || 'Driver'}!
           </h1>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto">
+          <p className="text-xs text-muted max-w-xs mx-auto">
             Set your vehicle & fuel defaults once so every trip calculation is automated.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-xs p-3 rounded-xl">
+          <div className="bg-danger-soft border border-danger-line text-danger text-xs p-3 rounded-xl">
             {error}
           </div>
         )}
@@ -101,7 +102,7 @@ function SetupForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Fuel Type */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2.5">
+            <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">
               Default Fuel Type
             </label>
             <div className="grid grid-cols-3 gap-2.5">
@@ -113,11 +114,11 @@ function SetupForm() {
                   className={cn(
                     'flex flex-col items-center justify-center p-3.5 rounded-2xl border transition-all text-center',
                     fuelType === ft.value
-                      ? 'bg-[#e3ece6] border-[#315e52] text-[#315e52]'
-                      : 'bg-white border-[#dde4dd] text-slate-500 hover:border-[#bcc9bf]'
+                      ? 'bg-primary-soft border-primary text-primary'
+                      : 'bg-surface border-line text-muted hover:border-line-strong'
                   )}
                 >
-                  <span className="text-2xl mb-1">{ft.icon}</span>
+                  <ft.icon size={24} className="mb-1.5" />
                   <span className="text-xs font-semibold">{ft.label}</span>
                 </button>
               ))}
@@ -126,12 +127,12 @@ function SetupForm() {
 
           {/* Currency (Locked / Default to INR) */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
               Default Currency
             </label>
-            <div className="bg-white border border-[#dde4dd] rounded-2xl p-3.5 flex items-center justify-between text-sm">
-              <span className="text-[#1b231f] font-medium">Indian Rupee (INR ₹)</span>
-              <span className="text-xs bg-[#edf1ec] text-slate-500 px-2.5 py-1 rounded-md">
+            <div className="bg-surface border border-line rounded-2xl p-3.5 flex items-center justify-between text-sm">
+              <span className="text-ink font-medium">Indian Rupee (INR ₹)</span>
+              <span className="text-xs bg-surface-soft text-muted px-2.5 py-1 rounded-md">
                 Active
               </span>
             </div>
@@ -141,12 +142,12 @@ function SetupForm() {
           <div>
             <label
               htmlFor={fuelPriceId}
-              className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2 cursor-pointer"
+              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2 cursor-pointer"
             >
               Last-Paid Fuel Price (per liter)
             </label>
-            <div className="bg-white border border-[#dde4dd] rounded-2xl p-4 flex items-center gap-3 focus-within:border-[#315e52] transition-colors">
-              <span className="text-xl font-bold text-slate-500">₹</span>
+            <div className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 focus-within:border-primary transition-colors">
+              <span className="text-xl font-bold text-muted">₹</span>
               <input
                 id={fuelPriceId}
                 type="number"
@@ -156,11 +157,11 @@ function SetupForm() {
                 value={fuelPrice}
                 onChange={(e) => setFuelPrice(e.target.value)}
                 placeholder="Enter fuel price"
-                className="w-full bg-transparent text-2xl font-bold text-[#1b231f] outline-none placeholder-slate-400"
+                className="w-full bg-transparent text-2xl font-bold text-ink outline-none placeholder:text-subtle"
               />
-              <span className="text-xs text-slate-400 font-medium">/ Liter</span>
+              <span className="text-xs text-muted font-medium">/ Liter</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1.5 px-1">
+            <p className="text-[11px] text-muted mt-1.5 px-1">
               Pre-fills on each scan so you don&apos;t have to re-type it. Can still be edited anytime.
             </p>
           </div>
@@ -168,11 +169,11 @@ function SetupForm() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-4 bg-[#315e52] hover:bg-[#244a40] active:scale-[0.99] text-white font-semibold rounded-2xl transition-all text-base flex items-center justify-center gap-2"
+            className="w-full py-4 bg-primary hover:bg-primary-hover active:scale-[0.99] text-on-primary font-semibold rounded-2xl transition-all text-base flex items-center justify-center gap-2"
           >
             {saving ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
                 Saving defaults...
               </span>
             ) : (
@@ -182,7 +183,7 @@ function SetupForm() {
         </form>
       </div>
 
-      <div className="text-center text-[11px] text-slate-600 pt-6">
+      <div className="text-center text-[11px] text-muted pt-6">
         You can update these preferences anytime under Profile Settings.
       </div>
     </div>

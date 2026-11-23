@@ -148,17 +148,17 @@ export default function CapturePage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-black text-white">Capture Dashboard</h1>
-        <p className="text-xs text-slate-400 mt-1">
+        <h1 className="text-2xl font-black text-ink">Capture Dashboard</h1>
+        <p className="text-xs text-muted mt-1">
           Photograph your car&apos;s dashboard showing the trip distance and average mileage.
         </p>
       </header>
 
       {errorMsg && (
-        <div role="alert" className="p-4 rounded-2xl bg-[#fdf0ee] border border-[#f0c9c4] text-[#8a2f22] text-xs flex items-start gap-3">
+        <div role="alert" className="p-4 rounded-2xl bg-danger-soft border border-danger-line text-danger text-xs flex items-start gap-3">
           <span className="text-base" aria-hidden="true">!</span>
           <div className="space-y-1">
-            <p className="font-semibold text-[#6e2419]">Couldn&apos;t read the photo</p>
+            <p className="font-semibold text-danger">Couldn&apos;t read the photo</p>
             <p>{errorMsg}</p>
           </div>
         </div>
@@ -169,21 +169,21 @@ export default function CapturePage() {
           <button
             type="button"
             onClick={() => setManualEntry(false)}
-            className="text-xs text-slate-500 hover:text-slate-700"
+            className="text-xs text-muted hover:text-ink-soft"
           >
             ← Back to capture options
           </button>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+          <div className="rounded-2xl border border-line bg-surface p-4 space-y-4">
             <div>
-              <h2 className="text-sm font-bold text-slate-900">Enter trip details</h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <h2 className="text-sm font-bold text-ink">Enter trip details</h2>
+              <p className="mt-1 text-xs text-muted">
                 Add the numbers shown by your vehicle or trip record.
               </p>
             </div>
 
             <label htmlFor={distanceInputId} className="block space-y-1.5">
-              <span className="text-xs font-medium text-slate-600">Distance driven (km)</span>
+              <span className="text-xs font-medium text-muted">Distance driven (km)</span>
               <input
                 id={distanceInputId}
                 type="number"
@@ -194,12 +194,12 @@ export default function CapturePage() {
                 value={distanceKm}
                 onChange={(event) => setDistanceKm(event.target.value)}
                 placeholder="Enter distance"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base font-semibold text-slate-900 outline-none focus:border-slate-400"
+                className="w-full rounded-xl border border-line bg-canvas px-3.5 py-3 text-base font-semibold text-ink outline-none focus:border-line-strong"
               />
             </label>
 
             <label htmlFor={mileageInputId} className="block space-y-1.5">
-              <span className="text-xs font-medium text-slate-600">Mileage (km/L)</span>
+              <span className="text-xs font-medium text-muted">Mileage (km/L)</span>
               <input
                 id={mileageInputId}
                 type="number"
@@ -210,12 +210,12 @@ export default function CapturePage() {
                 value={avgMileageKmpl}
                 onChange={(event) => setAvgMileageKmpl(event.target.value)}
                 placeholder="Enter mileage"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base font-semibold text-slate-900 outline-none focus:border-slate-400"
+                className="w-full rounded-xl border border-line bg-canvas px-3.5 py-3 text-base font-semibold text-ink outline-none focus:border-line-strong"
               />
             </label>
 
             <label htmlFor={fuelPriceInputId} className="block space-y-1.5">
-              <span className="text-xs font-medium text-slate-600">Fuel price (₹/L)</span>
+              <span className="text-xs font-medium text-muted">Fuel price (₹/L)</span>
               <input
                 id={fuelPriceInputId}
                 type="number"
@@ -225,14 +225,14 @@ export default function CapturePage() {
                 required
                 value={fuelPrice}
                 onChange={(event) => setFuelPrice(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base font-semibold text-slate-900 outline-none focus:border-slate-400"
+                className="w-full rounded-xl border border-line bg-canvas px-3.5 py-3 text-base font-semibold text-ink outline-none focus:border-line-strong"
               />
             </label>
 
             {Number(distanceKm) > 0 && Number(avgMileageKmpl) > 0 && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 flex items-center justify-between">
-                <span className="text-xs text-slate-500">Fuel used</span>
-                <span className="text-sm font-bold text-slate-900">
+              <div className="rounded-xl border border-line bg-canvas px-3.5 py-3 flex items-center justify-between">
+                <span className="text-xs text-muted">Fuel used</span>
+                <span className="text-sm font-bold text-ink">
                   {(Number(distanceKm) / Number(avgMileageKmpl)).toFixed(3)} L
                 </span>
               </div>
@@ -241,7 +241,7 @@ export default function CapturePage() {
 
           <button
             type="submit"
-            className="w-full rounded-2xl bg-[#315e52] py-3.5 text-sm font-semibold text-white hover:bg-[#244a40]"
+            className="w-full rounded-2xl bg-primary py-3.5 text-sm font-semibold text-on-primary hover:bg-primary-hover"
           >
             Continue to verification
           </button>

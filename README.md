@@ -22,17 +22,19 @@ Paytrol runs on **Azure App Service (Linux, Node 24)** and deploys from GitHub A
 | `NEXTAUTH_URL` | yes | e.g. `https://paytrol.azurewebsites.net` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | yes | Google OAuth client |
 | `GEMINI_API_KEY` | yes | Google AI Studio key; optional `GEMINI_MODEL` (default `gemini-2.5-flash`) |
-| `AZURE_COSMOS_CONNECTIONSTRING` (or `COSMOS_ENDPOINT` + `COSMOS_KEY`) | yes | Cosmos DB for NoSQL, key-based connection string; database `COSMOS_DATABASE` (default `paytrol`) is created automatically |
+| `AZURE_COSMOS_CONNECTIONSTRING` (or `MONGODB_URI`) | yes | MongoDB connection string (`mongodb://...`) from Azure Cosmos DB for MongoDB, or any MongoDB; database `MONGODB_DATABASE` (default `paytrol`) is created automatically |
 | `AZURE_STORAGE_CONNECTION_STRING` | recommended | photos go to the private `dashboard-photos` container; without it photos are stored inside trips |
 | `CRON_SECRET` | recommended | protects `/api/retention/cleanup` |
 
-Without the Cosmos settings the app refuses to save data in production rather than silently keeping it in memory
+The connection string can live in either the **App settings** or the **Connection strings** tab (type Custom). If a deploy fails its health check, `/api/health` names the exact problem.
+
+Without a database connection string the app refuses to save data in production rather than silently keeping it in memory
 (set `ALLOW_MEMORY_STORE=true` only for a throwaway demo).
 
 Use **Node 24 LTS** as the App Service runtime stack. The deploy sets the startup command to `node server.js`.
 
 ### Where the data lives
-- **Trips, balances, friends, users, settlements:** Azure Portal → Cosmos DB account → **Data Explorer** → database `paytrol`.
+- **Trips, balances, friends, users, settlements:** Azure Portal → Cosmos DB for MongoDB account → **Data Explorer** → database `paytrol`.
 - **Dashboard photos:** Storage account → Containers → `dashboard-photos` (private; the app hands out 1-hour signed links).
 - **Is everything connected?** Open `https://<your-app>/api/health`. It shows which services are live without exposing secrets.
 

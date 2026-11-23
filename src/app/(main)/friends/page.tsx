@@ -4,6 +4,7 @@ import { useState, useEffect, useId } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { Friendship, GuestContact } from '@/types';
+import { AlertCircleIcon, CheckCircleIcon } from '@/components/icons';
 
 export default function FriendsPage() {
   const { user } = useAuth();
@@ -204,8 +205,8 @@ export default function FriendsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-black text-[var(--foreground)]">Friends</h1>
-        <p className="mt-1 text-xs text-[var(--muted)]">
+        <h1 className="text-2xl font-black text-ink">Friends</h1>
+        <p className="mt-1 text-xs text-muted">
           Add friends by email to split fuel costs and track balances.
         </p>
       </header>
@@ -216,18 +217,18 @@ export default function FriendsPage() {
           className={cn(
             'flex items-start gap-2.5 rounded-2xl border p-3.5 text-xs',
             bannerNotice.type === 'success'
-              ? 'border-[#bfd8cc] bg-[#eaf4ef] text-[#1f5140]'
-              : 'border-[#f0c9c4] bg-[#fdf0ee] text-[#8a2f22]'
+              ? 'border-primary-line bg-primary-soft text-primary'
+              : 'border-danger-line bg-danger-soft text-danger'
           )}
         >
-          <span aria-hidden="true">{bannerNotice.type === 'success' ? '✓' : '!'}</span>
+          {bannerNotice.type === 'success' ? <CheckCircleIcon size={18} /> : <AlertCircleIcon size={18} />}
           <span>{bannerNotice.text}</span>
         </div>
       )}
 
       {/* Invite */}
       <form onSubmit={handleSendInvite} className="space-y-2">
-        <label htmlFor={emailInputId} className="block text-xs font-semibold text-[var(--muted)]">
+        <label htmlFor={emailInputId} className="block text-xs font-semibold text-muted">
           Invite a friend
         </label>
         <div className="flex gap-2">
@@ -238,13 +239,13 @@ export default function FriendsPage() {
             placeholder="friend@example.com"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
-            className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
           <button type="submit" disabled={sending || !inviteEmail} className={BTN_PRIMARY}>
             {sending ? 'Sending…' : 'Invite'}
           </button>
         </div>
-        <p className="px-1 text-[11px] text-[var(--muted)]">
+        <p className="px-1 text-[11px] text-muted">
           They&apos;ll see it in Paytrol when they sign in with this email.
         </p>
       </form>
@@ -252,7 +253,7 @@ export default function FriendsPage() {
       {loading ? (
         <div className="space-y-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-2xl bg-[var(--surface-soft)]" />
+            <div key={i} className="h-16 animate-pulse rounded-2xl bg-surface-soft" />
           ))}
         </div>
       ) : (
@@ -330,7 +331,7 @@ export default function FriendsPage() {
                   name={f.toName || f.toEmail}
                   subtitle={f.toEmail}
                   photo={f.toPhoto}
-                  actions={<span className="rounded-full bg-[#fbf1e3] px-2.5 py-1 text-[11px] font-semibold text-[#8a5a1c]">Waiting</span>}
+                  actions={<span className="rounded-full bg-warning-soft px-2.5 py-1 text-[11px] font-semibold text-warning">Waiting</span>}
                 />
               ))}
             </Section>
@@ -354,31 +355,31 @@ export default function FriendsPage() {
                   event.preventDefault();
                   handleUpdateGuest(guest);
                 }}
-                className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+                className="space-y-3 rounded-2xl border border-line bg-surface p-4"
               >
                 <label className="block space-y-1.5">
-                  <span className="text-[11px] font-medium text-[var(--muted)]">Name</span>
+                  <span className="text-[11px] font-medium text-muted">Name</span>
                   <input
                     value={guestNameDraft}
                     onChange={(event) => setGuestNameDraft(event.target.value)}
                     maxLength={80}
                     required
-                    className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                    className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary"
                   />
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-[11px] font-medium text-[var(--muted)]">Email (optional)</span>
+                  <span className="text-[11px] font-medium text-muted">Email (optional)</span>
                   <input
                     type="email"
                     value={guestEmailDraft}
                     onChange={(event) => setGuestEmailDraft(event.target.value)}
                     disabled={Boolean(guest.linkedUid)}
                     placeholder="friend@example.com"
-                    className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] disabled:opacity-60"
+                    className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary disabled:opacity-60"
                   />
                 </label>
                 {guest.linkedUid && (
-                  <p className="text-[11px] text-[var(--muted)]">A linked account&apos;s email can&apos;t be changed.</p>
+                  <p className="text-[11px] text-muted">A linked account&apos;s email can&apos;t be changed.</p>
                 )}
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setEditingGuestId(null)} className={BTN_SECONDARY}>
@@ -440,9 +441,9 @@ export default function FriendsPage() {
 // One button style per role, used everywhere on this page.
 const BTN_BASE =
   'inline-flex h-9 shrink-0 items-center justify-center rounded-xl px-3.5 text-xs font-semibold transition-colors disabled:opacity-50';
-const BTN_PRIMARY = `${BTN_BASE} bg-[var(--primary)] text-[#ffffff] hover:bg-[var(--primary-hover)]`;
-const BTN_SECONDARY = `${BTN_BASE} border border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-soft)]`;
-const BTN_DANGER = `${BTN_BASE} bg-[#b4432f] text-[#ffffff] hover:bg-[#9a3826]`;
+const BTN_PRIMARY = `${BTN_BASE} bg-primary text-on-primary hover:bg-primary-hover`;
+const BTN_SECONDARY = `${BTN_BASE} border border-line bg-surface text-ink hover:bg-surface-soft`;
+const BTN_DANGER = `${BTN_BASE} bg-danger text-on-primary hover:bg-danger-hover`;
 
 function Section({
   title,
@@ -458,15 +459,15 @@ function Section({
   return (
     <section className="space-y-2.5">
       <div>
-        <h2 className="flex items-center gap-2 text-sm font-bold text-[var(--foreground)]">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
           {title}
           {count ? (
-            <span className="rounded-full bg-[var(--surface-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted)]">
+            <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[11px] font-semibold text-muted">
               {count}
             </span>
           ) : null}
         </h2>
-        {hint && <p className="mt-1 text-xs text-[var(--muted)]">{hint}</p>}
+        {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
       </div>
       <div className="space-y-2">{children}</div>
     </section>
@@ -485,19 +486,19 @@ function Row({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-3">
       <div className="flex min-w-0 items-center gap-3">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt="" className="h-10 w-10 shrink-0 rounded-full" />
         ) : (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--primary-soft)] font-bold text-[var(--primary)]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft font-bold text-primary">
             {name?.[0]?.toUpperCase() || '?'}
           </div>
         )}
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-[var(--foreground)]">{name}</p>
-          {subtitle && <p className="truncate text-xs text-[var(--muted)]">{subtitle}</p>}
+          <p className="truncate text-sm font-semibold text-ink">{name}</p>
+          {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
         </div>
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -507,7 +508,7 @@ function Row({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[var(--line)] p-6 text-center text-xs text-[var(--muted)]">
+    <div className="rounded-2xl border border-dashed border-line p-6 text-center text-xs text-muted">
       {children}
     </div>
   );

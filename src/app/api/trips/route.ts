@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { createDocument, queryDocuments, getDocument, updateDocument, deleteDocument } from '@/lib/cosmos';
+import { createDocument, queryDocuments, getDocument, updateDocument, deleteDocument } from '@/lib/db';
 import type { GuestContact, Trip, TripParticipant, UserProfile } from '@/types';
 import { generateId } from '@/lib/utils';
 import { deletePhoto, getPhotoReadUrl, normalizeStoredPhotoUrl } from '@/lib/blob-storage';
@@ -189,8 +189,8 @@ export async function GET() {
 
     const trips = await queryDocuments<Trip>(
       'trips',
-      'SELECT * FROM c WHERE c.creatorUid = @uid OR ARRAY_CONTAINS(c.participants, {"uid": @uid}, true) ORDER BY c.createdAt DESC',
-      [{ name: '@uid', value: uid }]
+      { $or: [{ creatorUid: uid }, { participants: { $elemMatch: { uid } } }] },
+      { newestFirst: true }
     );
 
     // Dashboard photos are kept for 7 days. The scheduled cleanup route does the

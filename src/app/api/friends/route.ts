@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { createDocument, queryDocuments, getDocument, updateDocument, deleteDocument } from '@/lib/cosmos';
+import { createDocument, queryDocuments, getDocument, updateDocument, deleteDocument, equalsIgnoreCase } from '@/lib/db';
 import type { Friendship, UserProfile } from '@/types';
 import { generateId } from '@/lib/utils';
 
@@ -12,11 +12,13 @@ import { generateId } from '@/lib/utils';
 async function getRelationships(uid: string, email: string | undefined): Promise<Friendship[]> {
   const docs = await queryDocuments<Friendship>(
     'friendships',
-    'SELECT * FROM c WHERE c.fromUid = @me OR c.toUid = @me OR LOWER(c.toEmail) = @myEmail',
-    [
-      { name: '@me', value: uid },
-      { name: '@myEmail', value: email || '' },
-    ]
+    {
+      $or: [
+        { fromUid: uid },
+        { toUid: uid },
+        ...(email ? [{ toEmail: equalsIgnoreCase(email) }] : []),
+      ],
+    }
   );
   const seen = new Set<string>();
   return docs.filter((doc) => {
@@ -50,8 +52,7 @@ export async function GET() {
     if (email) {
       const unlinkedInvites = await queryDocuments<Friendship>(
         'friendships',
-        'SELECT * FROM c WHERE c.toEmail = @email AND (c.toUid = null OR c.toUid = "")',
-        [{ name: '@email', value: email }]
+        { toEmail: email, $or: [{ toUid: null }, { toUid: '' }] }
       );
       for (const inv of unlinkedInvites) {
         inv.toUid = uid;
@@ -166,8 +167,7 @@ export async function POST(req: NextRequest) {
     // Check if target user already exists in database
     const targetUsers = await queryDocuments<UserProfile>(
       'users',
-      'SELECT * FROM c WHERE c.email = @email',
-      [{ name: '@email', value: targetEmail }]
+      { email: targetEmail }
     );
     const targetUser = targetUsers[0] || null;
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
 import { useTripStore } from '@/stores/tripStore';
 import type { Trip } from '@/types';
+import { CheckIcon } from '@/components/icons';
 
 export default function ResultPage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function ResultPage() {
       return `• ${participant.displayName}: ${formatCurrency(participant.shareAmount)}${status}`;
     });
     const shareText = [
-      '🚗 Paytrol Trip Breakdown:',
+      'Paytrol trip breakdown',
       `Distance: ${trip.distanceKm} km`,
       `Avg Mileage: ${trip.avgMileageKmpl} km/L`,
       `Fuel Used: ${trip.fuelUsedLiters.toFixed(3)} L`,
@@ -64,10 +65,10 @@ export default function ResultPage() {
   if (!trip) {
     return (
       <div className="py-16 text-center space-y-3">
-        <p className="text-slate-400 text-sm">No recent trip data found.</p>
+        <p className="text-muted text-sm">No recent trip data found.</p>
         <button
           onClick={() => router.push('/home')}
-          className="text-xs text-indigo-400 font-semibold"
+          className="text-xs text-primary font-semibold"
         >
           Return to Dashboard →
         </button>
@@ -78,16 +79,16 @@ export default function ResultPage() {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2 pt-2">
-        <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-2xl mx-auto">
-          ✓
+        <div className="w-14 h-14 rounded-2xl bg-surface-soft border border-line text-primary flex items-center justify-center mx-auto">
+          <CheckIcon size={28} strokeWidth={2} />
         </div>
-        <h1 className="text-2xl font-black text-white">Trip Logged &amp; Split!</h1>
-        <p className="text-xs text-slate-400">
+        <h1 className="text-2xl font-black text-ink">Trip Logged &amp; Split!</h1>
+        <p className="text-xs text-muted">
           Trip card generated with photo proof &amp; automatic ledger balances.
         </p>
       </div>
 
-      <div className="rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl">
+      <div className="rounded-3xl bg-surface border border-line overflow-hidden shadow-2xl">
         {trip.photoURL && (
           <div className="relative aspect-[16/9] bg-black">
             <img
@@ -95,7 +96,7 @@ export default function ResultPage() {
               alt="Cluster proof"
               className="w-full h-full object-cover"
             />
-            <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-slate-200 text-[10px] font-semibold text-slate-700 flex items-center gap-1.5">
+            <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-surface backdrop-blur-md border border-line text-[10px] font-semibold text-ink-soft flex items-center gap-1.5">
               <span>●</span>
               <span>Cluster Photo Proof Attached</span>
             </div>
@@ -103,38 +104,38 @@ export default function ResultPage() {
         )}
 
         <div className="p-5 space-y-4">
-          <div className="flex items-baseline justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-baseline justify-between border-b border-line pb-3">
             <div>
-              <span className="text-xs text-slate-400 block">Total Fuel Cost</span>
-              <span className="text-2xl font-black text-indigo-400">
+              <span className="text-xs text-muted block">Total Fuel Cost</span>
+              <span className="text-2xl font-black text-primary">
                 {formatCurrency(trip.totalCost)}
               </span>
             </div>
             <div className="text-right">
-              <span className="text-xs text-slate-400 block">Fuel Consumed</span>
-              <span className="text-sm font-bold text-white">
+              <span className="text-xs text-muted block">Fuel Consumed</span>
+              <span className="text-sm font-bold text-ink">
                 {trip.fuelUsedLiters.toFixed(3)} L
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 bg-slate-800/40 p-3 rounded-2xl border border-slate-800 text-center text-xs">
+          <div className="grid grid-cols-3 gap-2 bg-surface-soft p-3 rounded-2xl border border-line text-center text-xs">
             <div>
-              <span className="text-[10px] text-slate-500 block">Distance</span>
-              <span className="font-bold text-white">{trip.distanceKm} km</span>
+              <span className="text-[10px] text-muted block">Distance</span>
+              <span className="font-bold text-ink">{trip.distanceKm} km</span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-500 block">Mileage</span>
-              <span className="font-bold text-white">{trip.avgMileageKmpl} km/L</span>
+              <span className="text-[10px] text-muted block">Mileage</span>
+              <span className="font-bold text-ink">{trip.avgMileageKmpl} km/L</span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-500 block">Rate</span>
-              <span className="font-bold text-white">₹{trip.fuelPricePerLiter}/L</span>
+              <span className="text-[10px] text-muted block">Rate</span>
+              <span className="font-bold text-ink">₹{trip.fuelPricePerLiter}/L</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="flex justify-between text-xs text-slate-400">
+            <div className="flex justify-between text-xs text-muted">
               <span className="font-semibold uppercase tracking-wider">
                 Split Ledger ({trip.participants.length} riders)
               </span>
@@ -145,25 +146,25 @@ export default function ResultPage() {
               {trip.participants.map((p, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/30 border border-slate-800/80"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-surface-soft border border-line"
                 >
                   <div className="flex items-center gap-2.5">
                     {p.photoURL ? (
-                      <img src={p.photoURL} alt="" className="w-7 h-7 rounded-full border border-slate-700" />
+                      <img src={p.photoURL} alt="" className="w-7 h-7 rounded-full border border-line" />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-slate-700 text-xs font-bold flex items-center justify-center text-slate-300">
+                      <div className="w-7 h-7 rounded-full bg-surface-sunken text-xs font-bold flex items-center justify-center text-ink-soft">
                         {p.displayName?.[0] || 'U'}
                       </div>
                     )}
                     <div>
-                      <p className="text-xs font-semibold text-white">{p.displayName}</p>
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-xs font-semibold text-ink">{p.displayName}</p>
+                      <p className="text-[10px] text-muted">
                         {p.isGuest ? 'Guest · tracked by name' : p.settled ? 'Paid (Driver)' : 'Owes driver'}
                       </p>
                     </div>
                   </div>
 
-                  <span className="text-xs font-bold text-indigo-400">
+                  <span className="text-xs font-bold text-primary">
                     {formatCurrency(p.shareAmount)}
                   </span>
                 </div>
@@ -176,17 +177,18 @@ export default function ResultPage() {
       <div className="space-y-2.5">
         <button
           onClick={handleShare}
-          className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-2xl transition-colors text-sm flex items-center justify-center gap-2 border border-slate-700"
+          className="w-full py-3.5 bg-surface-soft hover:bg-surface-sunken text-ink font-semibold rounded-2xl transition-colors text-sm flex items-center justify-center gap-2 border border-line"
         >
-          <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
           </svg>
-          <span>{copied ? '✓ Copied breakdown!' : 'Share Trip Breakdown'}</span>
+          {copied && <CheckIcon size={16} strokeWidth={2.2} />}
+            <span>{copied ? 'Copied breakdown' : 'Share Trip Breakdown'}</span>
         </button>
 
         <button
           onClick={handleDone}
-          className="w-full py-4 bg-[#315e52] hover:bg-[#244a40] active:scale-[0.99] text-white font-semibold rounded-2xl transition-all text-sm"
+          className="w-full py-4 bg-primary hover:bg-primary-hover active:scale-[0.99] text-on-primary font-semibold rounded-2xl transition-all text-sm"
         >
           Done (Go to Dashboard)
         </button>

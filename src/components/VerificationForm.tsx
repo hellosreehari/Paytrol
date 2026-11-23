@@ -3,6 +3,7 @@
 import { useEffect, useState, useId } from 'react';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { ExtractionResult } from '@/types';
+import { AlertTriangleIcon, CollapseIcon, ExpandIcon } from '@/components/icons';
 
 interface VerificationFormProps {
   extraction: ExtractionResult;
@@ -65,7 +66,7 @@ export default function VerificationForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* 1. Cropped dashboard photo display */}
       {photoUrl && (
-        <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 group">
+        <div className="relative rounded-2xl overflow-hidden border border-line bg-surface group">
           <div className="max-h-48 overflow-hidden flex items-center justify-center bg-black/80">
             <img
               src={photoUrl}
@@ -79,26 +80,27 @@ export default function VerificationForm({
           <button
             type="button"
             onClick={() => setShowFullPhoto(!showFullPhoto)}
-            className="absolute bottom-2.5 right-2.5 text-[11px] bg-slate-950/80 hover:bg-slate-900 text-slate-200 px-2.5 py-1 rounded-md backdrop-blur-md border border-slate-700 flex items-center gap-1.5 transition-colors"
+            className="absolute bottom-2.5 right-2.5 text-[11px] bg-surface/90 hover:bg-surface text-ink px-2.5 py-1 rounded-md backdrop-blur-md border border-line flex items-center gap-1.5 transition-colors"
           >
-            <span>{showFullPhoto ? 'Collapse crop' : '🔍 Expand photo'}</span>
+            {showFullPhoto ? <CollapseIcon size={14} /> : <ExpandIcon size={14} />}
+            <span>{showFullPhoto ? 'Collapse photo' : 'Expand photo'}</span>
           </button>
         </div>
       )}
 
-      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-        <span className="font-semibold uppercase tracking-wider text-indigo-400">
+      <div className="flex items-center justify-between text-xs text-muted px-1">
+        <span className="font-semibold uppercase tracking-wider text-primary">
           Verification Gate
         </span>
         <span>Human-in-the-loop review</span>
       </div>
 
       {hasConfidenceIssue && (
-        <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-3.5 flex items-start gap-3 text-amber-200">
-          <span className="text-lg">⚠️</span>
+        <div className="bg-warning-soft border border-warning-line rounded-xl p-3.5 flex items-start gap-3 text-warning">
+          <AlertTriangleIcon size={20} className="shrink-0" />
           <div className="text-xs space-y-0.5">
-            <p className="font-semibold text-amber-100">Low AI Confidence Detected</p>
-            <p className="text-amber-200/90">
+            <p className="font-semibold text-warning">Low AI Confidence Detected</p>
+            <p className="text-warning">
               Glare or angle affected readings. Please inspect the highlighted yellow fields and correct values manually.
             </p>
           </div>
@@ -111,24 +113,24 @@ export default function VerificationForm({
           className={cn(
             'rounded-2xl border p-4 transition-all duration-150',
             isDistanceLow
-              ? 'bg-amber-500/10 border-amber-400/80 shadow-sm shadow-amber-500/20'
-              : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600'
+              ? 'bg-warning-soft border-warning-line shadow-sm'
+              : 'bg-surface-soft border-line hover:border-line-strong'
           )}
         >
           <div className="flex items-center justify-between mb-1.5">
             <label
               htmlFor={distanceInputId}
-              className="text-xs font-medium text-slate-300 flex items-center gap-2 cursor-pointer"
+              className="text-xs font-medium text-ink-soft flex items-center gap-2 cursor-pointer"
             >
               <span>Distance Covered (km)</span>
-              <span className="text-[10px] text-slate-500 font-normal">(Under &quot;Since start&quot;)</span>
+              <span className="text-[10px] text-muted font-normal">(Under &quot;Since start&quot;)</span>
             </label>
             {isDistanceLow ? (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-medium border border-amber-400/30">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning-soft text-warning font-medium border border-warning-line">
                 Low Confidence
               </span>
             ) : (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-soft text-ink-soft border border-line font-medium">
                 Checked
               </span>
             )}
@@ -142,10 +144,10 @@ export default function VerificationForm({
               required
               value={distanceKm || ''}
               onChange={(e) => setDistanceKm(parseFloat(e.target.value) || 0)}
-              className="w-full bg-transparent text-2xl font-bold text-white outline-none"
+              className="w-full bg-transparent text-2xl font-bold text-ink outline-none"
               placeholder="Enter distance"
             />
-            <span className="text-slate-400 text-sm font-semibold">km</span>
+            <span className="text-muted text-sm font-semibold">km</span>
           </div>
         </div>
 
@@ -153,24 +155,24 @@ export default function VerificationForm({
           className={cn(
             'rounded-2xl border p-4 transition-all duration-150',
             isMileageLow
-              ? 'bg-amber-500/10 border-amber-400/80 shadow-sm shadow-amber-500/20'
-              : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600'
+              ? 'bg-warning-soft border-warning-line shadow-sm'
+              : 'bg-surface-soft border-line hover:border-line-strong'
           )}
         >
           <div className="flex items-center justify-between mb-1.5">
             <label
               htmlFor={mileageInputId}
-              className="text-xs font-medium text-slate-300 flex items-center gap-2 cursor-pointer"
+              className="text-xs font-medium text-ink-soft flex items-center gap-2 cursor-pointer"
             >
               <span>Average Mileage (km/L)</span>
-              <span className="text-[10px] text-slate-500 font-normal">(Fuel pump icon)</span>
+              <span className="text-[10px] text-muted font-normal">(Fuel pump icon)</span>
             </label>
             {isMileageLow ? (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-medium border border-amber-400/30">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning-soft text-warning font-medium border border-warning-line">
                 Low Confidence
               </span>
             ) : (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-soft text-ink-soft border border-line font-medium">
                 Checked
               </span>
             )}
@@ -184,27 +186,27 @@ export default function VerificationForm({
               required
               value={avgMileage || ''}
               onChange={(e) => setAvgMileage(parseFloat(e.target.value) || 0)}
-              className="w-full bg-transparent text-2xl font-bold text-white outline-none"
+              className="w-full bg-transparent text-2xl font-bold text-ink outline-none"
               placeholder="Enter mileage"
             />
-            <span className="text-slate-400 text-sm font-semibold">km/L</span>
+            <span className="text-muted text-sm font-semibold">km/L</span>
           </div>
         </div>
 
-        <div className="rounded-2xl border bg-slate-800/70 border-slate-700/80 hover:border-slate-600 p-4 transition-colors">
+        <div className="rounded-2xl border bg-surface-soft border-line hover:border-line-strong p-4 transition-colors">
           <div className="flex items-center justify-between mb-1.5">
             <label
               htmlFor={fuelPriceInputId}
-              className="text-xs font-medium text-slate-300 cursor-pointer"
+              className="text-xs font-medium text-ink-soft cursor-pointer"
             >
               Fuel Price (per liter)
             </label>
             {fuelPrice > 0 && (
-              <span className="text-[10px] text-slate-400">Saved fuel price</span>
+              <span className="text-[10px] text-muted">Saved fuel price</span>
             )}
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-slate-400 text-lg font-bold">₹</span>
+            <span className="text-muted text-lg font-bold">₹</span>
             <input
               id={fuelPriceInputId}
               type="number"
@@ -213,43 +215,43 @@ export default function VerificationForm({
               required
               value={fuelPrice || ''}
               onChange={(e) => setFuelPrice(parseFloat(e.target.value) || 0)}
-              className="w-full bg-transparent text-2xl font-bold text-white outline-none"
+              className="w-full bg-transparent text-2xl font-bold text-ink outline-none"
               placeholder="Enter fuel price"
             />
-            <span className="text-slate-400 text-sm font-semibold">/L</span>
+            <span className="text-muted text-sm font-semibold">/L</span>
           </div>
         </div>
       </div>
 
-      <div className="border border-slate-200 bg-slate-50 rounded-2xl p-4 space-y-3">
-        <div className="flex items-center justify-between text-xs text-slate-700">
+      <div className="border border-line bg-canvas rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between text-xs text-ink-soft">
           <span className="font-semibold uppercase tracking-wider">Computed Trip Economics</span>
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[11px] text-muted">
             {distanceKm} km ÷ {avgMileage} km/L
           </span>
         </div>
         <div className="grid grid-cols-2 gap-3 pt-1">
-          <div className="bg-white rounded-xl p-3 border border-slate-200">
-            <span className="text-[11px] text-slate-400 block mb-0.5">Fuel Consumed</span>
-            <span className="text-lg font-bold text-white">
-              {fuelUsed.toFixed(3)} <span className="text-xs text-indigo-300 font-normal">Liters</span>
+          <div className="bg-surface rounded-xl p-3 border border-line">
+            <span className="text-[11px] text-muted block mb-0.5">Fuel Consumed</span>
+            <span className="text-lg font-bold text-ink">
+              {fuelUsed.toFixed(3)} <span className="text-xs text-primary font-normal">Liters</span>
             </span>
           </div>
-          <div className="bg-slate-900/60 rounded-xl p-3 border border-indigo-500/20">
-            <span className="text-[11px] text-slate-400 block mb-0.5">Total Trip Cost</span>
-            <span className="text-lg font-bold text-slate-900">{formatCurrency(totalCost, currency)}</span>
+          <div className="bg-surface rounded-xl p-3 border border-primary-line">
+            <span className="text-[11px] text-muted block mb-0.5">Total Trip Cost</span>
+            <span className="text-lg font-bold text-ink">{formatCurrency(totalCost, currency)}</span>
           </div>
         </div>
-        <div className="text-[11px] text-slate-500 bg-white p-2.5 rounded-xl border border-slate-200 space-y-0.5">
+        <div className="text-[11px] text-muted bg-surface p-2.5 rounded-xl border border-line space-y-0.5">
           <div className="flex justify-between">
             <span>Formula:</span>
-            <span className="font-mono text-slate-700 text-[10px]">
+            <span className="font-mono text-ink-soft text-[10px]">
               {distanceKm} ÷ {avgMileage} = {fuelUsed.toFixed(3)} L
             </span>
           </div>
           <div className="flex justify-between font-medium">
             <span>Cost:</span>
-            <span className="font-mono text-slate-700 text-[10px]">
+            <span className="font-mono text-ink-soft text-[10px]">
               {fuelUsed.toFixed(3)} L × ₹{fuelPrice} = {formatCurrency(totalCost, currency)}
             </span>
           </div>
@@ -259,7 +261,7 @@ export default function VerificationForm({
       <button
         type="submit"
         disabled={distanceKm <= 0 || avgMileage <= 0 || fuelPrice <= 0}
-        className="w-full py-4 bg-[#315e52] hover:bg-[#244a40] active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-500 text-white font-semibold rounded-2xl transition-all text-base flex items-center justify-center gap-2"
+        className="w-full py-4 bg-primary hover:bg-primary-hover active:scale-[0.99] disabled:bg-surface-sunken disabled:text-muted text-on-primary font-semibold rounded-2xl transition-all text-base flex items-center justify-center gap-2"
       >
         <span>Confirm &amp; Calculate</span>
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
