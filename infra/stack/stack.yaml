@@ -1,0 +1,14 @@
+apiVersion: orun.io/v1
+kind: Stack
+metadata:
+  name: local
+  title: paytrol repo-local compositions
+  version: 0.1.0
+  description: >-
+    Compositions this repository needs that stack-tectonic does not ship:
+    workers-app (a framework app's Worker build, deploy, secret delivery and
+    smoke check) and gated-deploy (an external backend's deploy that waits
+    for its credential).
+  owner: hellosreehari
+  tags:
+    - cloudflare

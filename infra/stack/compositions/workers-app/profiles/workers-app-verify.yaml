@@ -1,0 +1,17 @@
+apiVersion: sourceplane.io/v1alpha1
+kind: ExecutionProfile
+metadata:
+  name: workers-app-verify
+spec:
+  description: Full non-mutating verification including wrangler deploy --dry-run
+
+  jobs:
+    verify-deploy:
+      includeCapabilities:
+        - workers-app.setup-node
+        - workers-app.setup-pnpm
+        - workers-app.install
+        - workers-app.verify-structure
+        - workers-app.build
+        - workers-app.verify-output
+        - workers-app.deploy-dry-run

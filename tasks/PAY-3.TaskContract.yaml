@@ -12,6 +12,10 @@ spec:
     - "wiring.fixture.json"
     - ".github/workflows/orun.yml"
     - "specs/epics/port-paytrol-workers/IMPLEMENTATION-STATUS.md"
+    - "package.json"
+    - "pnpm-lock.yaml"
+    - "pnpm-workspace.yaml"
+    - "default/paytrol/web"
   doneWhen:
     - "orun validate passes on intent.yaml"
     - "orun plan resolves the stack composition"

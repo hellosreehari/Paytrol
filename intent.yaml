@@ -1,0 +1,223 @@
+# Orun intent for paytrol (ported from Vercel). Placeholders:
+#   paytrol     repo name (also the Orun project slug)
+#   ws_JFT5YNRA          workspace id (ws_...)
+#   sreehari   the Cloudflare account's workers.dev subdomain
+#   0.20.0  stack-tectonic tag the current baselines pin (e.g. 0.20.0)
+# Delete the OPTIONAL blocks the survey did not call for.
+apiVersion: sourceplane.io/v1
+kind: Intent
+
+metadata:
+  name: paytrol
+  description: paytrol on Cloudflare Workers through Orunbase (ported from Vercel).
+  namespace: paytrol
+
+execution:
+  state:
+    backendUrl: https://api-edge-prod.oruncloud.workers.dev
+    # Declaring the workspace implies strict mode: a non-interactive run that
+    # resolves no workspace fails fast.
+    workspace: ws_JFT5YNRA
+    requireOrg: true
+    autopushCatalog: true
+  lanes:
+    mode: auto
+    maxLanes: 6
+    concurrency: 6
+
+compositions:
+  sources:
+    # Pinned: bumping the tag is the deliberate upgrade step.
+    - name: stack-tectonic
+      kind: oci
+      ref: oci://ghcr.io/sourceplane/stack-tectonic:0.20.0
+    # Repo-local: workers-app (Worker build/deploy/secrets/smoke) and
+    # gated-deploy (an external backend's deploy), which stack-tectonic lacks.
+    - name: local
+      kind: dir
+      path: infra/stack
+  resolution:
+    precedence:
+      - local
+      - stack-tectonic
+
+# Infra roots (and apps under apps/) are discovered by their component.yaml.
+# An app at the repository root is declared inline below instead, so the
+# upstream layout does not have to move.
+discovery:
+  roots:
+    - infra/
+    # - apps/          # OPTIONAL: monorepo apps with their own component.yaml
+
+automation:
+  triggerBindings:
+    github-pull-request:
+      description: Pull request validation
+      on:
+        provider: github
+        event: pull_request
+        actions: [opened, synchronize, reopened, ready_for_review]
+        baseBranches: [main]
+      plan:
+        scope: changed
+        base: pull_request.base.sha
+        head: pull_request.head.sha
+    github-push-main:
+      description: Main branch convergence after merge
+      on:
+        provider: github
+        event: push
+        branches: [main]
+    local-development:
+      description: Local planning
+      on:
+        provider: local
+
+environments:
+  stage:
+    description: Deployed on every merge to main, before prod. Pull requests plan and verify here.
+    url: https://paytrol-web-stage.sreehari.workers.dev
+    activation:
+      triggerRefs: [github-pull-request, github-push-main, local-development]
+    parameterDefaults:
+      terraform:
+        lane: verify
+        namespace: paytrol
+        namespacePrefix: ""
+        owner: hellosreehari
+        repo: paytrol
+    policies:
+      requireApproval: "false"
+  prod:
+    description: Where visitors are. Deploys after stage converges on the same commit.
+    url: https://paytrol-web-prod.sreehari.workers.dev
+    activation:
+      triggerRefs: [github-push-main, local-development]
+    promotion:
+      dependsOn:
+        - environment: stage
+    parameterDefaults:
+      terraform:
+        lane: verify
+        namespace: paytrol
+        namespacePrefix: ""
+        owner: hellosreehari
+        repo: paytrol
+    policies:
+      requireApproval: "false"
+
+components:
+  # The main app, at the repository root (the upstream layout).
+  - name: web
+    type: workers-app
+    domain: app          # not the component's own name: a domain and a component share the catalog's name space
+    path: .
+    lane: isolated
+    # A root-path component owns no files under `orun plan --changed`: list
+    # what changes the Worker, or merges will not redeploy it.
+    change:
+      inputs:
+        - "app/**"
+        - "src/**"
+        - "pages/**"
+        - "components/**"
+        - "lib/**"
+        - "public/**"
+        - "content/**"
+        - "*.config.*"
+        - "middleware.ts"
+        - "proxy.ts"
+        - "instrumentation.ts"
+        - "worker.ts"
+        - "package.json"
+        - "pnpm-lock.yaml"
+        - "pnpm-workspace.yaml"
+        - "tsconfig.json"
+        - "wrangler.template.jsonc"
+        - "wiring.fixture.json"
+        - "open-next.config.ts"
+        - "tooling/**"
+        - "scripts/**"
+        - "infra/stack/compositions/workers-app/**"
+    parameters:
+      nodeVersion: "22"
+      pnpmVersion: "12.21.0"
+      workspaceDir: .
+      appDir: .
+      wranglerConfig: wrangler.jsonc
+      workerEntrypoint: worker.ts
+      assetsDir: .open-next/assets
+      workerName: paytrol-web
+      environmentAwareWorkerName: true
+      workersDevSubdomain: sreehari
+      environmentBuildVar: ORUN_ENVIRONMENT
+      installCommand: pnpm install --frozen-lockfile
+      # Deploy lanes hold the Cloudflare token and render binding ids from the
+      # wiring documents; verify lanes render from the fixture. Drop the
+      # render when wrangler.template.jsonc has no @@wiring tokens.
+      buildCommand: 'node tooling/wire/render.mjs --template wrangler.template.jsonc --out wrangler.jsonc --map wiring.fixture.json --env "${ORUN_ENVIRONMENT}" && pnpm build:worker'
+      # Space-separated Orun secrets (from secretEnv) written into the Worker
+      # after deploy and before smoke. Empty: nothing written.
+      workerSecrets: "NEXTAUTH_SECRET CRON_SECRET"
+      # A here-string, not a pipe: smoke runs with pipefail and grep -q closing
+      # a pipe early fails it with SIGPIPE on pages larger than 64 KB.
+      smokeCommand: 'html=$(curl -sfL --max-time 30 "${DEPLOYED_URL}/") && grep -qi "Paytrol" <<< "${html}"'
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+      NEXT_TELEMETRY_DISABLED: "1"
+    secretEnv:
+      NEXTAUTH_SECRET: "secret://ws_JFT5YNRA/paytrol/{{ .environment }}/NEXTAUTH_SECRET"
+      CRON_SECRET: "secret://ws_JFT5YNRA/paytrol/{{ .environment }}/CRON_SECRET"
+    subscribe:
+      environments:
+        - name: stage
+          profile: verify
+          env:
+            # Build-time public values per environment (NEXT_PUBLIC_*, VITE_*, PUBLIC_*).
+            NEXT_PUBLIC_SITE_URL: https://paytrol-web-stage.sreehari.workers.dev
+          profileRules:
+            - profile: deploy
+              when:
+                triggerRef: github-push-main
+        - name: prod
+          profile: verify
+          env:
+            NEXT_PUBLIC_SITE_URL: https://paytrol-web-prod.sreehari.workers.dev
+          profileRules:
+            - profile: deploy
+              when:
+                triggerRef: github-push-main
+
+  # OPTIONAL: a backend that stays outside Cloudflare and has its own deploy
+  # step. Replace <backend-dir>, <check> and <deploy> with its CLI's.
+  # - name: backend
+  #   type: gated-deploy
+  #   domain: services
+  #   path: .
+  #   change:
+  #     inputs: ["<backend-dir>/**", "package.json", "pnpm-lock.yaml"]
+  #   parameters:
+  #     nodeVersion: "22"
+  #     pnpmVersion: "12.21.0"
+  #     installCommand: pnpm install --frozen-lockfile
+  #     verifyCommand: <check: non-mutating, e.g. the CLI's --version>
+  #     deployCommand: <deploy>
+  #     gateSecret: BACKEND_DEPLOY_KEY
+  #   optionalSecretEnv:
+  #     BACKEND_DEPLOY_KEY: "secret://ws_JFT5YNRA/paytrol/{{ .environment }}/BACKEND_DEPLOY_KEY"
+  #   subscribe:
+  #     environments:
+  #       - name: stage
+  #         profile: verify
+  #         profileRules: [{ profile: deploy, when: { triggerRef: github-push-main } }]
+  #       - name: prod
+  #         profile: verify
+  #         profileRules: [{ profile: deploy, when: { triggerRef: github-push-main } }]
+
+repo:
+  displayName: paytrol
+  docs:
+    overview: README.md
+    pages:
+      - { path: specs/epics/port-paytrol-workers/README.md, role: reference, title: The epic }
+      - { path: specs/epics/port-paytrol-workers/design.md, role: architecture, title: Design }
