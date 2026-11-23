@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, cn } from '@/lib/utils';
 import type { Friendship, GuestContact, TripParticipant } from '@/types';
+import { CheckIcon } from '@/components/icons';
 
 interface VerifiedTripData {
   distanceKm: number;
@@ -470,7 +471,7 @@ export default function SplitPage() {
                           : 'border-line bg-surface-soft'
                       )}
                     >
-                      {isSelected && <span aria-hidden="true">✓</span>}
+                      {isSelected && <CheckIcon size={14} strokeWidth={2.4} />}
                     </span>
                     <span className="min-w-0">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-soft text-xs font-bold text-ink-soft">

@@ -4,11 +4,12 @@ import { useState, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { FUEL_TYPE_ICONS } from '@/components/icons';
 
 const fuelTypes = [
-  { value: 'petrol', label: 'Petrol', icon: '⛽' },
-  { value: 'diesel', label: 'Diesel', icon: '🛢️' },
-  { value: 'cng', label: 'CNG', icon: '💨' },
+  { value: 'petrol', label: 'Petrol', icon: FUEL_TYPE_ICONS.petrol },
+  { value: 'diesel', label: 'Diesel', icon: FUEL_TYPE_ICONS.diesel },
+  { value: 'cng', label: 'CNG', icon: FUEL_TYPE_ICONS.cng },
 ] as const;
 
 export default function SetupPage() {
@@ -117,7 +118,7 @@ function SetupForm() {
                       : 'bg-surface border-line text-muted hover:border-line-strong'
                   )}
                 >
-                  <span className="text-2xl mb-1">{ft.icon}</span>
+                  <ft.icon size={24} className="mb-1.5" />
                   <span className="text-xs font-semibold">{ft.label}</span>
                 </button>
               ))}

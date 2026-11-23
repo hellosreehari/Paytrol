@@ -4,6 +4,7 @@ import { useState, useEffect, useId } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { Friendship, GuestContact } from '@/types';
+import { AlertCircleIcon, CheckCircleIcon } from '@/components/icons';
 
 export default function FriendsPage() {
   const { user } = useAuth();
@@ -220,7 +221,7 @@ export default function FriendsPage() {
               : 'border-danger-line bg-danger-soft text-danger'
           )}
         >
-          <span aria-hidden="true">{bannerNotice.type === 'success' ? '✓' : '!'}</span>
+          {bannerNotice.type === 'success' ? <CheckCircleIcon size={18} /> : <AlertCircleIcon size={18} />}
           <span>{bannerNotice.text}</span>
         </div>
       )}

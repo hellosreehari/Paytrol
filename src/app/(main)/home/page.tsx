@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 import type { Trip } from '@/types';
+import { FuelPumpIcon } from '@/components/icons';
 
 interface HomeBalance {
   amount: number;
@@ -48,10 +49,7 @@ export default function HomePage() {
     <div className="space-y-6">
       <header className="flex items-center justify-between pt-1">
         <div>
-          <h1 className="text-xl font-bold text-ink flex items-center gap-2">
-            <span>Hey, {user?.name?.split(' ')[0] || 'Driver'}</span>
-            <span className="text-lg">👋</span>
-          </h1>
+          <h1 className="text-xl font-bold text-ink">Hey, {user?.name?.split(' ')[0] || 'Driver'}</h1>
           <p className="text-xs text-muted mt-0.5">
             {profile?.defaultFuelType?.toUpperCase() || 'PETROL'} • {profile?.lastFuelPrice ? `₹${profile.lastFuelPrice}/L` : 'Fuel price not set'}
           </p>
@@ -167,7 +165,7 @@ export default function HomePage() {
                   {trip.photoURL ? (
                     <img src={trip.photoURL} alt="Trip proof" className="w-12 h-12 rounded-xl object-cover shrink-0 border border-line" />
                   ) : (
-                    <div className="w-12 h-12 rounded-xl bg-surface-soft flex items-center justify-center text-muted shrink-0">⛽</div>
+                    <div className="w-12 h-12 rounded-xl bg-surface-soft flex items-center justify-center text-primary shrink-0"><FuelPumpIcon size={22} /></div>
                   )}
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-ink truncate">

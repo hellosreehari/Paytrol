@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
 import { useTripStore } from '@/stores/tripStore';
 import type { Trip } from '@/types';
+import { CheckIcon } from '@/components/icons';
 
 export default function ResultPage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function ResultPage() {
       return `• ${participant.displayName}: ${formatCurrency(participant.shareAmount)}${status}`;
     });
     const shareText = [
-      '🚗 Paytrol Trip Breakdown:',
+      'Paytrol trip breakdown',
       `Distance: ${trip.distanceKm} km`,
       `Avg Mileage: ${trip.avgMileageKmpl} km/L`,
       `Fuel Used: ${trip.fuelUsedLiters.toFixed(3)} L`,
@@ -78,8 +79,8 @@ export default function ResultPage() {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2 pt-2">
-        <div className="w-14 h-14 rounded-2xl bg-surface-soft border border-line text-ink-soft flex items-center justify-center text-2xl mx-auto">
-          ✓
+        <div className="w-14 h-14 rounded-2xl bg-surface-soft border border-line text-primary flex items-center justify-center mx-auto">
+          <CheckIcon size={28} strokeWidth={2} />
         </div>
         <h1 className="text-2xl font-black text-ink">Trip Logged &amp; Split!</h1>
         <p className="text-xs text-muted">
@@ -181,7 +182,8 @@ export default function ResultPage() {
           <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
           </svg>
-          <span>{copied ? '✓ Copied breakdown!' : 'Share Trip Breakdown'}</span>
+          {copied && <CheckIcon size={16} strokeWidth={2.2} />}
+            <span>{copied ? 'Copied breakdown' : 'Share Trip Breakdown'}</span>
         </button>
 
         <button

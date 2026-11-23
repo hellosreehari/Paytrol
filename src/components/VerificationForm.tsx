@@ -3,6 +3,7 @@
 import { useEffect, useState, useId } from 'react';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { ExtractionResult } from '@/types';
+import { AlertTriangleIcon, CollapseIcon, ExpandIcon } from '@/components/icons';
 
 interface VerificationFormProps {
   extraction: ExtractionResult;
@@ -81,7 +82,8 @@ export default function VerificationForm({
             onClick={() => setShowFullPhoto(!showFullPhoto)}
             className="absolute bottom-2.5 right-2.5 text-[11px] bg-surface/90 hover:bg-surface text-ink px-2.5 py-1 rounded-md backdrop-blur-md border border-line flex items-center gap-1.5 transition-colors"
           >
-            <span>{showFullPhoto ? 'Collapse crop' : '🔍 Expand photo'}</span>
+            {showFullPhoto ? <CollapseIcon size={14} /> : <ExpandIcon size={14} />}
+            <span>{showFullPhoto ? 'Collapse photo' : 'Expand photo'}</span>
           </button>
         </div>
       )}
@@ -95,7 +97,7 @@ export default function VerificationForm({
 
       {hasConfidenceIssue && (
         <div className="bg-warning-soft border border-warning-line rounded-xl p-3.5 flex items-start gap-3 text-warning">
-          <span className="text-lg">⚠️</span>
+          <AlertTriangleIcon size={20} className="shrink-0" />
           <div className="text-xs space-y-0.5">
             <p className="font-semibold text-warning">Low AI Confidence Detected</p>
             <p className="text-warning">

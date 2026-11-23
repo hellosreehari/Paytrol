@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { Trip } from '@/types';
+import { CheckCircleIcon } from '@/components/icons';
 
 interface NormalizedBalance {
   id: string;
@@ -179,7 +180,7 @@ export default function BalancesPage() {
           </div>
         ) : activeBalances.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-line p-10 text-center space-y-2">
-            <span className="text-3xl">🎉</span>
+            <CheckCircleIcon size={36} strokeWidth={1.6} className="mx-auto text-primary" />
             <p className="text-sm font-semibold text-ink">All balances are settled!</p>
             <p className="text-xs text-muted max-w-xs mx-auto">
               When you or your friends split trips, the net balances will automatically update here.

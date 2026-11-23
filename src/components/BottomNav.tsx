@@ -4,68 +4,71 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
+type NavItem = { href: string; label: string; icon: (props: { className?: string }) => React.JSX.Element };
+
+// Two tabs either side of the central Scan button, so the bar is symmetric.
+const LEFT: NavItem[] = [
+  { href: '/home', label: 'Home', icon: HomeIcon },
+  { href: '/history', label: 'Trips', icon: ListIcon },
+];
+const RIGHT: NavItem[] = [
+  { href: '/friends', label: 'Friends', icon: UsersIcon },
+  { href: '/balances', label: 'Balances', icon: WalletIcon },
+];
+
 export default function BottomNav() {
   const pathname = usePathname();
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const scanActive = isActive('/capture');
 
-  const navItems = [
-    { href: '/home', label: 'Home', icon: HomeIcon },
-    { href: '/capture', label: 'Scan', icon: CameraIcon, isFab: true },
-    { href: '/friends', label: 'Friends', icon: UsersIcon },
-    { href: '/history', label: 'Trips', icon: ListIcon },
-    { href: '/balances', label: 'Balances', icon: WalletIcon },
-  ];
+  const tab = (item: NavItem) => {
+    const active = isActive(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={active ? 'page' : undefined}
+        className={cn(
+          'flex flex-col items-center justify-center gap-1 py-1.5 text-[11px] transition-colors',
+          active ? 'text-primary font-semibold' : 'text-muted font-medium hover:text-ink'
+        )}
+      >
+        <span
+          className={cn(
+            'flex h-8 w-14 items-center justify-center rounded-full transition-colors',
+            active && 'bg-primary-soft'
+          )}
+        >
+          <item.icon className={cn('h-[22px] w-[22px]', active ? 'stroke-[2]' : 'stroke-[1.6]')} />
+        </span>
+        <span>{item.label}</span>
+      </Link>
+    );
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-xl border-t border-line pb-safe">
-      <div className="flex items-center justify-around max-w-md mx-auto px-2 pt-2 pb-1.5">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
+      <div className="mx-auto grid max-w-md grid-cols-5 items-end px-2 pt-1.5">
+        {LEFT.map(tab)}
 
-          if (item.isFab) {
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="relative -top-5 flex flex-col items-center group focus:outline-none"
-              >
-                <div
-                  className={cn(
-                    'w-12 h-12 rounded-2xl flex items-center justify-center transition-transform active:scale-95 border',
-                    isActive
-                      ? 'bg-primary border-primary text-on-primary'
-                      : 'bg-primary border-primary text-on-primary hover:bg-primary-hover'
-                  )}
-                >
-                  <item.icon className="w-6 h-6 stroke-[2]" />
-                </div>
-                <span className="text-[10px] font-semibold tracking-wide text-ink-soft mt-1">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          }
+        <Link
+          href="/capture"
+          aria-label="Scan dashboard"
+          aria-current={scanActive ? 'page' : undefined}
+          className="flex flex-col items-center gap-1 pb-1.5 text-[11px] font-semibold text-primary focus:outline-none"
+        >
+          <span
+            className={cn(
+              '-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary',
+              'shadow-lg shadow-primary/25 ring-4 ring-surface transition-transform active:scale-95 hover:bg-primary-hover'
+            )}
+          >
+            <CameraIcon className="h-6 w-6 stroke-[1.9]" />
+          </span>
+          <span>Scan</span>
+        </Link>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex flex-col items-center py-1 px-3 text-[11px] font-medium transition-all duration-150 rounded-lg',
-                isActive
-                  ? 'text-primary font-semibold'
-                  : 'text-muted hover:text-ink'
-              )}
-            >
-              <item.icon
-                className={cn(
-                  'w-5 h-5 mb-0.5 transition-transform',
-                  isActive ? 'stroke-[2.2] scale-110 text-primary' : 'stroke-[1.6]'
-                )}
-              />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {RIGHT.map(tab)}
       </div>
     </nav>
   );

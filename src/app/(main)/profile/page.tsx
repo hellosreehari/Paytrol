@@ -3,11 +3,12 @@
 import { useState, useId } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { CheckIcon, FUEL_TYPE_ICONS } from '@/components/icons';
 
 const fuelTypes = [
-  { value: 'petrol', label: 'Petrol', icon: '⛽' },
-  { value: 'diesel', label: 'Diesel', icon: '🛢️' },
-  { value: 'cng', label: 'CNG', icon: '💨' },
+  { value: 'petrol', label: 'Petrol', icon: FUEL_TYPE_ICONS.petrol },
+  { value: 'diesel', label: 'Diesel', icon: FUEL_TYPE_ICONS.diesel },
+  { value: 'cng', label: 'CNG', icon: FUEL_TYPE_ICONS.cng },
 ] as const;
 
 export default function ProfilePage() {
@@ -83,7 +84,7 @@ export default function ProfilePage() {
 
       {savedSuccess && (
         <div className="p-3.5 rounded-2xl bg-primary-soft border border-primary-line text-primary text-xs flex items-center gap-2">
-          <span>✓</span>
+          <CheckIcon size={16} />
           <span>Profile &amp; vehicle preferences saved successfully!</span>
         </div>
       )}
@@ -115,7 +116,7 @@ export default function ProfilePage() {
                   : 'bg-surface-soft border-line text-muted hover:border-line-strong'
                 )}
               >
-              <span className="text-xl mb-0.5">{ft.icon}</span>
+              <ft.icon size={24} className="mb-1.5" />
               <span className="text-xs font-semibold">{ft.label}</span>
               </button>
             ))}
