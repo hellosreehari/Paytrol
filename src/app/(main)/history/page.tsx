@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
+import { invalidate, prefetchData, RESOURCES, useCachedData } from '@/lib/data-cache';
+import { cleanTripName, collectTripTags, tripHasTag } from '@/lib/trip-labels';
+import TripLabelsFields from '@/components/TripLabelsFields';
 
 export default function HistoryPage() {
   const { user } = useAuth();
   const currentUserId = user?.uid || '';
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const tripsResource = useCachedData<Trip[]>(RESOURCES.trips);
+  const trips = tripsResource.data ?? [];
+  const loading = tripsResource.loading;
+  const setTrips = (update: (current: Trip[]) => Trip[]) =>
+    tripsResource.mutate((current) => update(current ?? []));
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [distanceDraft, setDistanceDraft] = useState('');
   const [mileageDraft, setMileageDraft] = useState('');
@@ -19,35 +25,33 @@ export default function HistoryPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [deletingTrip, setDeletingTrip] = useState(false);
   const [confirmDeleteTrip, setConfirmDeleteTrip] = useState(false);
-  const [friends, setFriends] = useState<Friendship[]>([]);
-  const [guestContacts, setGuestContacts] = useState<GuestContact[]>([]);
+  const friendsResource = useCachedData<{ friends: Friendship[] }>(RESOURCES.friends);
+  const guestsResource = useCachedData<GuestContact[]>(RESOURCES.guests);
+  const friends = friendsResource.data?.friends ?? [];
+  const guestContacts = guestsResource.data ?? [];
+  const setGuestContacts = (update: (current: GuestContact[]) => GuestContact[]) =>
+    guestsResource.mutate((current) => update(current ?? []));
   const [includeCreatorDraft, setIncludeCreatorDraft] = useState(true);
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
   const [quickGuestName, setQuickGuestName] = useState('');
   const [addingGuest, setAddingGuest] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [tagsDraft, setTagsDraft] = useState<string[]>([]);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadTrips() {
-      try {
-        const res = await fetch('/api/trips');
-        const data = await res.json();
-        if (data.success && data.data) {
-          setTrips(data.data || []);
-        }
-      } catch (err) {
-        console.error('Failed to load trips history:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadTrips();
-  }, []);
+  const allTags = collectTripTags(trips);
+  const activeTagFilter = tagFilter && allTags.some((tag) => tag.toLocaleLowerCase() === tagFilter.toLocaleLowerCase())
+    ? tagFilter
+    : null;
+  const visibleTrips = activeTagFilter ? trips.filter((trip) => tripHasTag(trip, activeTagFilter)) : trips;
 
-  const openEdit = async (trip: Trip) => {
+  const openEdit = (trip: Trip) => {
     setEditingTrip(trip);
     setDistanceDraft(String(trip.distanceKm));
     setMileageDraft(String(trip.avgMileageKmpl));
     setFuelPriceDraft(String(trip.fuelPricePerLiter));
+    setNameDraft(trip.name ?? '');
+    setTagsDraft(trip.tags ?? []);
     setEditError(null);
     setIncludeCreatorDraft(trip.participants.some((participant) => participant.uid === currentUserId));
     setSelectedParticipantIds(
@@ -58,24 +62,8 @@ export default function HistoryPage() {
         )
     );
 
-    try {
-      const [friendsRes, guestsRes] = await Promise.all([
-        fetch('/api/friends'),
-        fetch('/api/guests'),
-      ]);
-      const [friendsData, guestsData] = await Promise.all([
-        friendsRes.json(),
-        guestsRes.json(),
-      ]);
-      if (friendsData.success) {
-        setFriends(friendsData.data?.friends || []);
-      }
-      if (guestsData.success) {
-        setGuestContacts(guestsData.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to load split people:', error);
-    }
+    // Friends and guests are usually cached already; refresh them quietly.
+    prefetchData([RESOURCES.friends, RESOURCES.guests]);
   };
 
   const closeEdit = () => {
@@ -101,6 +89,7 @@ export default function HistoryPage() {
         throw new Error(data.error || 'Could not delete trip.');
       }
       setTrips((current) => current.filter((trip) => trip.id !== editingTrip.id));
+      invalidate([RESOURCES.balances]);
       setEditingTrip(null);
       setConfirmDeleteTrip(false);
       setNotice('Trip deleted and balances adjusted.');
@@ -215,6 +204,8 @@ export default function HistoryPage() {
           avgMileageKmpl: Number(mileageDraft),
           fuelPricePerLiter: Number(fuelPriceDraft),
           participants,
+          name: cleanTripName(nameDraft),
+          tags: tagsDraft,
         }),
       });
       const data = await res.json();
@@ -226,6 +217,7 @@ export default function HistoryPage() {
       setTrips((current) =>
         current.map((trip) => trip.id === updatedTrip.id ? updatedTrip : trip)
       );
+      invalidate([RESOURCES.balances]);
       setEditingTrip(null);
       setNotice('Trip details updated and balances adjusted.');
     } catch (error: unknown) {
@@ -250,6 +242,37 @@ export default function HistoryPage() {
         </p>
       )}
 
+      {allTags.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1" role="group" aria-label="Filter trips by tag">
+          <button
+            type="button"
+            onClick={() => setTagFilter(null)}
+            aria-pressed={!activeTagFilter}
+            className={!activeTagFilter
+              ? 'shrink-0 rounded-full bg-[#315e52] px-3 py-1.5 text-xs font-semibold text-white'
+              : 'shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600'}
+          >
+            All
+          </button>
+          {allTags.map((tag) => {
+            const selected = activeTagFilter?.toLocaleLowerCase() === tag.toLocaleLowerCase();
+            return (
+              <button
+                type="button"
+                key={tag}
+                onClick={() => setTagFilter(selected ? null : tag)}
+                aria-pressed={selected}
+                className={selected
+                  ? 'shrink-0 rounded-full bg-[#315e52] px-3 py-1.5 text-xs font-semibold text-white'
+                  : 'shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600'}
+              >
+                #{tag}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -265,7 +288,7 @@ export default function HistoryPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {trips.map((trip) => (
+          {visibleTrips.map((trip) => (
             <div
               key={trip.id}
               className="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm"
@@ -275,6 +298,8 @@ export default function HistoryPage() {
                   <img
                     src={trip.photoURL}
                     alt="Dashboard proof"
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-[10px] text-slate-300">
@@ -285,9 +310,27 @@ export default function HistoryPage() {
 
               <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-white">{trip.distanceKm} km Trip</h3>
-                    <p className="text-xs text-slate-400">Logged by {trip.creatorName}</p>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-white break-words">
+                      {trip.name || `${trip.distanceKm} km Trip`}
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      {trip.name ? `${trip.distanceKm} km · ` : ''}Logged by {trip.creatorName}
+                    </p>
+                    {trip.tags && trip.tags.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {trip.tags.map((tag) => (
+                          <button
+                            type="button"
+                            key={tag}
+                            onClick={() => setTagFilter(tag)}
+                            className="rounded-full bg-[#edf2ed] px-2 py-0.5 text-[11px] font-medium text-[#315e52]"
+                          >
+                            #{tag}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-start gap-2 text-right">
                     <div>
@@ -299,7 +342,7 @@ export default function HistoryPage() {
                       type="button"
                       onClick={() => openEdit(trip)}
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800"
-                      aria-label={`Edit trip for ${trip.distanceKm} km`}
+                      aria-label={`Edit trip ${trip.name || `for ${trip.distanceKm} km`}`}
                       title="Edit trip"
                     >
                       <svg
@@ -437,6 +480,16 @@ export default function HistoryPage() {
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
                 />
               </label>
+            </div>
+
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <TripLabelsFields
+                name={nameDraft}
+                onNameChange={setNameDraft}
+                tags={tagsDraft}
+                onTagsChange={setTagsDraft}
+                suggestions={allTags}
+              />
             </div>
 
             <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">

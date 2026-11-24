@@ -4,7 +4,10 @@ import { useState, useEffect, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, cn } from '@/lib/utils';
-import type { Friendship, GuestContact, TripParticipant } from '@/types';
+import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
+import { invalidate, RESOURCES, setCachedData, useCachedData } from '@/lib/data-cache';
+import { cleanTripName, collectTripTags } from '@/lib/trip-labels';
+import TripLabelsFields from '@/components/TripLabelsFields';
 
 interface VerifiedTripData {
   distanceKm: number;
@@ -28,9 +31,18 @@ export default function SplitPage() {
   const guestNameInputId = useId();
 
   const [verifiedData, setVerifiedData] = useState<VerifiedTripData | null>(null);
-  const [friends, setFriends] = useState<Friendship[]>([]);
+  const friendsResource = useCachedData<{ friends: Friendship[] }>(RESOURCES.friends);
+  const guestsResource = useCachedData<GuestContact[]>(RESOURCES.guests);
+  const friends = friendsResource.data?.friends ?? [];
+  const guestContacts = guestsResource.data ?? [];
+  const setGuestContacts = (update: (current: GuestContact[]) => GuestContact[]) =>
+    guestsResource.mutate((current) => update(current ?? []));
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-  const [guestContacts, setGuestContacts] = useState<GuestContact[]>([]);
+  const [autoSelected, setAutoSelected] = useState(false);
+  const [tripName, setTripName] = useState('');
+  const [tripTags, setTripTags] = useState<string[]>([]);
+  const { data: pastTrips } = useCachedData<Trip[]>(RESOURCES.trips);
+  const tagSuggestions = collectTripTags(pastTrips ?? []);
   const [selectedGuests, setSelectedGuests] = useState<string[]>([]);
   const [guestName, setGuestName] = useState('');
   const [includeMe, setIncludeMe] = useState(true);
@@ -53,38 +65,19 @@ export default function SplitPage() {
       router.replace('/capture');
       return;
     }
+  }, [router]);
 
-    // Load friends from API
-    async function loadFriends() {
-      try {
-        const [friendsRes, guestsRes] = await Promise.all([
-          fetch('/api/friends'),
-          fetch('/api/guests'),
-        ]);
-        const [friendsData, guestsData] = await Promise.all([
-          friendsRes.json(),
-          guestsRes.json(),
-        ]);
-        if (friendsData.success && friendsData.data) {
-          const accepted = friendsData.data.friends || [];
-          setFriends(accepted);
-          // If friends exist, auto-select the first one by default for immediate convenience
-          if (accepted.length > 0) {
-            const firstFriend = accepted[0];
-            const uid = user?.uid || '';
-            const fUid = firstFriend.fromUid === uid ? firstFriend.toUid : firstFriend.fromUid;
-            if (fUid) setSelectedFriends([fUid]);
-          }
-        }
-        if (guestsData.success && guestsData.data) setGuestContacts(guestsData.data);
-      } catch (err) {
-        console.error('Failed to load friends:', err);
-      }
-    }
-    loadFriends();
-  }, [router, user]);
-
+  // Pre-select the first friend once, for convenience, as soon as the friends list is known.
   const currentUserId = user?.uid || '';
+  const firstFriend = friends[0];
+  const firstFriendUid = firstFriend
+    ? firstFriend.fromUid === currentUserId ? firstFriend.toUid : firstFriend.fromUid
+    : null;
+  if (!autoSelected && friendsResource.data && currentUserId) {
+    setAutoSelected(true);
+    if (firstFriendUid) setSelectedFriends([firstFriendUid]);
+  }
+
   const friendUserIds = new Set(
     friends
       .map((friend) => friend.fromUid === currentUserId ? friend.toUid : friend.fromUid)
@@ -230,6 +223,8 @@ export default function SplitPage() {
           totalCost: verifiedData.totalCost,
           splitMode: 'equal',
           participants: participantsList,
+          name: cleanTripName(tripName),
+          tags: tripTags,
         }),
       });
 
@@ -239,6 +234,8 @@ export default function SplitPage() {
       }
 
       sessionStorage.setItem('paytrol_tripResult', JSON.stringify(data.data));
+      setCachedData<Trip[]>(RESOURCES.trips, (current) => [data.data as Trip, ...(current ?? [])]);
+      invalidate([RESOURCES.trips, RESOURCES.balances]);
       router.push('/result');
     } catch (err: unknown) {
       console.error('Trip save error:', err);
@@ -504,6 +501,20 @@ export default function SplitPage() {
             })}
           </div>
         )}
+      </section>
+
+      {/* Optional trip name and tags */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Trip details</h2>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <TripLabelsFields
+            name={tripName}
+            onNameChange={setTripName}
+            tags={tripTags}
+            onTagsChange={setTripTags}
+            suggestions={tagSuggestions}
+          />
+        </div>
       </section>
 
       {/* Summary card */}

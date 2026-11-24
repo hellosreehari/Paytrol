@@ -7,6 +7,7 @@ import { generateId } from '@/lib/utils';
 import { deletePhoto, getPhotoReadUrl, normalizeStoredPhotoUrl } from '@/lib/blob-storage';
 import { computeTripCost, splitByPercentages, splitEqually } from '@/lib/money';
 import { adjustBalance, getAcceptedFriendUids, type LedgerParty } from '@/lib/ledger';
+import { cleanTripName, cleanTripTags } from '@/lib/trip-labels';
 
 const PHOTO_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -274,6 +275,8 @@ export async function POST(req: NextRequest) {
       fuelPricePerLiter?: number;
       splitMode?: 'equal' | 'custom';
       participants?: TripParticipant[];
+      name?: unknown;
+      tags?: unknown;
     };
 
     const distanceKm = Number(body.distanceKm);
@@ -296,8 +299,12 @@ export async function POST(req: NextRequest) {
     if (shareError) return jsonError(shareError, 400);
 
     const owner = await getCreatorParty(uid, session?.user || {});
+    const name = cleanTripName(body.name);
+    const tags = cleanTripTags(body.tags);
     const trip: Trip = {
       id: generateId(),
+      ...(name ? { name } : {}),
+      ...(tags.length > 0 ? { tags } : {}),
       creatorUid: uid,
       creatorName: owner.name,
       photoURL,
@@ -351,6 +358,8 @@ export async function PATCH(req: NextRequest) {
       avgMileageKmpl?: number;
       fuelPricePerLiter?: number;
       participants?: TripParticipant[];
+      name?: unknown;
+      tags?: unknown;
     };
     if (!body.tripId) {
       return jsonError('Trip ID is required.', 400);
@@ -391,6 +400,17 @@ export async function PATCH(req: NextRequest) {
     trip.totalCost = totalCost;
     trip.splitMode = 'equal';
     trip.participants = resolved.participants;
+    // Name and tags are only changed when the request includes them.
+    if (body.name !== undefined) {
+      const name = cleanTripName(body.name);
+      if (name) trip.name = name;
+      else delete trip.name;
+    }
+    if (body.tags !== undefined) {
+      const tags = cleanTripTags(body.tags);
+      if (tags.length > 0) trip.tags = tags;
+      else delete trip.tags;
+    }
 
     const updatedTrip = await updateDocument('trips', trip);
 

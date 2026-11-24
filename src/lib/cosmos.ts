@@ -260,3 +260,15 @@ export async function upsertDocumentAtomically<T extends { id: string }>(
   }
   return null;
 }
+
+const KNOWN_CONTAINERS = ['users', 'trips', 'friendships', 'balances', 'guests', 'settlements'];
+
+/**
+ * Open the database and every container up front, in parallel. Called when
+ * the server starts so the first request after a cold start doesn't pay for
+ * the database and container setup round trips one after another.
+ */
+export async function warmUpCosmos(): Promise<void> {
+  if (!isAzureCosmosConfigured()) return;
+  await Promise.all(KNOWN_CONTAINERS.map((id) => getContainer(id)));
+}

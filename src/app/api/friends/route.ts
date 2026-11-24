@@ -15,37 +15,43 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Auto-link any invites that were sent to this user's email before they signed up
-    if (email) {
-      const unlinkedInvites = await queryDocuments<Friendship>(
+    // These lookups don't depend on each other, so run them together instead
+    // of one after another (each is a cross-partition Cosmos query).
+    const [unlinkedInvites, sent, received] = await Promise.all([
+      // Invites sent to this user's email before they signed up
+      email
+        ? queryDocuments<Friendship>(
+            'friendships',
+            'SELECT * FROM c WHERE c.toEmail = @email AND (c.toUid = null OR c.toUid = "")',
+            [{ name: '@email', value: email }]
+          )
+        : Promise.resolve([] as Friendship[]),
+      // 1. Invites sent by current user
+      queryDocuments<Friendship>(
         'friendships',
-        'SELECT * FROM c WHERE c.toEmail = @email AND (c.toUid = null OR c.toUid = "")',
-        [{ name: '@email', value: email }]
-      );
-      for (const inv of unlinkedInvites) {
+        'SELECT * FROM c WHERE c.fromUid = @uid',
+        [{ name: '@uid', value: uid }]
+      ),
+      // 2. Invites received by current user (by uid, or by email before linking)
+      queryDocuments<Friendship>(
+        'friendships',
+        'SELECT * FROM c WHERE c.toUid = @uid OR (c.toEmail = @email AND c.fromUid != @uid)',
+        [
+          { name: '@uid', value: uid },
+          { name: '@email', value: email || '' },
+        ]
+      ),
+    ]);
+
+    // Auto-link those invites to this account
+    await Promise.all(
+      unlinkedInvites.map((inv) => {
         inv.toUid = uid;
         inv.toName = session?.user?.name || inv.toName;
         inv.toPhoto = session?.user?.image || inv.toPhoto;
         inv.updatedAt = new Date().toISOString();
-        await updateDocument('friendships', inv);
-      }
-    }
-
-    // 1. Fetch invites sent by current user
-    const sent = await queryDocuments<Friendship>(
-      'friendships',
-      'SELECT * FROM c WHERE c.fromUid = @uid',
-      [{ name: '@uid', value: uid }]
-    );
-
-    // 2. Fetch invites received by current user
-    const received = await queryDocuments<Friendship>(
-      'friendships',
-      'SELECT * FROM c WHERE c.toUid = @uid OR (c.toEmail = @email AND c.fromUid != @uid)',
-      [
-        { name: '@uid', value: uid },
-        { name: '@email', value: email || '' },
-      ]
+        return updateDocument('friendships', inv);
+      })
     );
 
     // Filter duplicates and partition into tabs

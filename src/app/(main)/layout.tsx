@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';
+import { prefetchData, RESOURCES } from '@/lib/data-cache';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, needsSetup } = useAuth();
@@ -18,6 +19,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
     }
   }, [isAuthenticated, isLoading, needsSetup, router]);
+
+  // Warm every tab's data in parallel as soon as we know who is signed in, so
+  // switching tabs shows data straight away instead of a loading skeleton.
+  const ready = !isLoading && isAuthenticated && !needsSetup;
+  useEffect(() => {
+    if (!ready) return;
+    const refresh = () => prefetchData(Object.values(RESOURCES));
+    refresh();
+    // Refresh when the installed app comes back to the foreground.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [ready]);
 
   if (isLoading) {
     return (
