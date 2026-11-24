@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { extractDashboardReadings } from '@/lib/gemini';
-import { getPhotoReadUrl, hasBlobConfig, uploadPhoto } from '@/lib/blob-storage';
+import { ExtractionError, extractDashboardReadings } from '@/lib/gemini';
+import { deletePhoto, getPhotoReadUrl, hasBlobConfig, uploadPhoto } from '@/lib/blob-storage';
 
 // Simple per-user guard so one account can't exhaust the shared Gemini quota.
 // Counts are per server instance and reset every 24 hours.
@@ -64,15 +64,22 @@ export async function POST(req: NextRequest) {
     const mimeType = file.type || 'image/jpeg';
 
     // Run the AI extraction and the photo upload in parallel.
-    const [extraction, photoURL] = await Promise.all([
-      extractDashboardReadings(base64, mimeType),
-      uploadPhoto(buffer, file.name || 'cluster.jpg', mimeType).catch((err) => {
-        // Never store a multi-MB data URL in the trip when blob storage is
-        // configured but failing: save the trip without a photo instead.
-        console.warn('Storage upload failed:', err);
-        return hasBlobConfig() ? '' : `data:${mimeType};base64,${base64}`;
-      }),
-    ]);
+    const uploadPromise = uploadPhoto(buffer, file.name || 'cluster.jpg', mimeType).catch((err) => {
+      // Never store a multi-MB data URL in the trip when blob storage is
+      // configured but failing: save the trip without a photo instead.
+      console.warn('Storage upload failed:', err);
+      return hasBlobConfig() ? '' : `data:${mimeType};base64,${base64}`;
+    });
+
+    let extraction;
+    try {
+      extraction = await extractDashboardReadings(base64, mimeType);
+    } catch (err) {
+      // Don't leave an orphaned photo behind when the scan fails.
+      void uploadPromise.then((url) => deletePhoto(url));
+      throw err;
+    }
+    const photoURL = await uploadPromise;
 
     return NextResponse.json({
       success: true,
@@ -87,12 +94,12 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
+    if (error instanceof ExtractionError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.httpStatus });
+    }
     console.error('Extract API error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to analyze dashboard photo.',
-      },
+      { success: false, error: 'Failed to analyze dashboard photo. Please try again or enter the trip manually.' },
       { status: 500 }
     );
   }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryDocuments, updateDocument } from '@/lib/cosmos';
+import { queryDocuments, updateDocument } from '@/lib/db';
 import { deletePhoto } from '@/lib/blob-storage';
 import type { Trip } from '@/types';
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const retentionLimit = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const trips = await queryDocuments<Trip>('trips', 'SELECT * FROM c');
+    const trips = await queryDocuments<Trip>('trips', {});
     let cleaned = 0;
 
     for (const trip of trips) {

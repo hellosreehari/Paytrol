@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { adjustBalance, getBalanceKey } from '@/lib/ledger';
-import { getDocument } from '@/lib/cosmos';
+import { getDocument } from '@/lib/db';
 import type { Balance } from '@/types';
 
-// No COSMOS_* variables are set in tests, so this runs on the in-memory store.
+// No database is configured in tests, so this runs on the in-memory store.
 
 const alice = { uid: 'alice', name: 'Alice', photo: null };
 const bob = { uid: 'bob', name: 'Bob', photo: null };

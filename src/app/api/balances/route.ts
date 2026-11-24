@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { createDocument, queryDocuments, upsertDocumentAtomically } from '@/lib/cosmos';
+import { createDocument, queryDocuments, upsertDocumentAtomically } from '@/lib/db';
 import { roundMoney } from '@/lib/money';
 import { generateId } from '@/lib/utils';
 import type { Balance, Settlement } from '@/types';
@@ -17,8 +17,7 @@ export async function GET() {
 
     const balances = await queryDocuments<Balance>(
       'balances',
-      'SELECT * FROM c WHERE c.uid1 = @uid OR c.uid2 = @uid',
-      [{ name: '@uid', value: uid }]
+      { $or: [{ uid1: uid }, { uid2: uid }] }
     );
 
     // Normalize from the current user's perspective:

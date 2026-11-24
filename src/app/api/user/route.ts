@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getDocument, createDocument, updateDocument } from '@/lib/cosmos';
+import { getDocument, createDocument, updateDocument } from '@/lib/db';
 import { linkGuestContactsForUser } from '@/lib/guest-linking';
 import type { UserProfile } from '@/types';
 

@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f4f6f1;
-  --foreground: #1b231f;
-  --muted: #69766f;
-  --line: #dde4dd;
-  --surface: #ffffff;
-  --surface-soft: #edf2ed;
-  --primary: #315e52;
-  --primary-hover: #244a40;
-  --primary-soft: #dfeae5;
-  --accent: #d97848;
+/*
+ * Design tokens. Use these through Tailwind utilities (bg-surface, text-muted,
+ * border-line, bg-primary, text-danger, ...) rather than raw palette colours,
+ * so every screen shares one palette.
+ */
+@theme {
+  --color-canvas: #f4f6f1;
+  --color-surface: #ffffff;
+  --color-surface-soft: #eef2ee;
+  --color-surface-sunken: #e4eae5;
+  --color-line: #dde4dd;
+  --color-line-strong: #c3cec6;
+
+  --color-ink: #1b231f;
+  --color-ink-soft: #3d4a43;
+  --color-muted: #66736c;
+  --color-subtle: #949e98;
+
+  --color-primary: #315e52;
+  --color-primary-hover: #244a40;
+  --color-primary-soft: #e3ece6;
+  --color-primary-line: #bfd0c4;
+  --color-on-primary: #ffffff;
+
+  --color-accent: #e5895a;
+
+  --color-danger: #b4432f;
+  --color-danger-hover: #9a3826;
+  --color-danger-soft: #fbefec;
+  --color-danger-line: #f0c9c4;
+
+  --color-warning: #8a5a1c;
+  --color-warning-soft: #fbf3e6;
+  --color-warning-line: #ead9bd;
 }
 
 html,
 body {
   min-height: 100%;
-  background: var(--background);
+  background: var(--color-canvas);
 }
 
 body {
-  color: var(--foreground);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -39,7 +62,7 @@ input {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
-  outline: 2px solid #315e52;
+  outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
 
@@ -60,186 +83,6 @@ svg:not([width]) {
 
 .pt-safe {
   padding-top: max(env(safe-area-inset-top, 0px), 12px);
-}
-
-/* Existing card structure, with a cohesive warm-light palette. */
-[class~="text-white"] {
-  color: #1b231f !important;
-}
-[class~="text-slate-100"],
-[class~="text-slate-200"] {
-  color: #28352f !important;
-}
-[class~="text-slate-300"] {
-  color: #526158 !important;
-}
-[class~="text-slate-400"] {
-  color: #748079 !important;
-}
-[class~="text-slate-500"] {
-  color: #7d8982 !important;
-}
-[class~="text-slate-600"] {
-  color: #9aa49e !important;
-}
-[class~="text-indigo-400"],
-[class~="text-indigo-300"] {
-  color: #315e52 !important;
-}
-[class~="text-indigo-100/90"] {
-  color: #526158 !important;
-}
-[class~="text-indigo-700"] {
-  color: #ffffff !important;
-}
-[class~="text-emerald-400"],
-[class~="text-emerald-300"],
-[class~="text-emerald-200"] {
-  color: #315e52 !important;
-}
-[class~="text-rose-400"],
-[class~="text-rose-300"],
-[class~="text-rose-200"] {
-  color: #8a6b55 !important;
-}
-
-[class~="bg-slate-900"],
-[class~="bg-slate-900/80"],
-[class~="bg-slate-900/70"],
-[class~="bg-slate-900/60"] {
-  background-color: #ffffff !important;
-  box-shadow: 0 1px 2px rgba(37, 49, 42, 0.04), 0 8px 24px rgba(37, 49, 42, 0.04) !important;
-}
-[class~="bg-slate-950"] {
-  background-color: #f8faf7 !important;
-}
-[class~="bg-slate-950/80"] {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-}
-[class~="bg-slate-800"],
-[class~="bg-slate-800/90"],
-[class~="bg-slate-800/80"],
-[class~="bg-slate-800/70"],
-[class~="bg-slate-800/60"],
-[class~="bg-slate-800/40"],
-[class~="bg-slate-800/30"] {
-  background-color: #edf1ec !important;
-}
-[class~="bg-slate-700"],
-[class~="bg-slate-700/80"],
-[class~="bg-slate-700/70"],
-[class~="bg-slate-700/60"] {
-  background-color: #e5ebe6 !important;
-}
-[class~="bg-[#1b1e26]"] {
-  background-color: #e6eee8 !important;
-  border-color: #d6e1d8 !important;
-  color: #1b231f !important;
-  box-shadow: 0 12px 32px rgba(49, 94, 82, 0.08) !important;
-}
-[class~="bg-[#111318]/95"] {
-  background-color: rgba(255, 255, 255, 0.96) !important;
-  border-color: #dde4dd !important;
-  box-shadow: 0 -8px 24px rgba(37, 49, 42, 0.05) !important;
-}
-[class~="bg-[#090d16]"],
-[class~="bg-[#0e1014]"] {
-  background-color: #f4f6f1 !important;
-}
-[class~="bg-white/[0.05]"],
-[class~="bg-white/[0.025]"] {
-  background-color: #ffffff !important;
-  border-color: #dde4dd !important;
-}
-
-[class~="border-slate-800"],
-[class~="border-slate-800/90"],
-[class~="border-slate-800/80"],
-[class~="border-slate-800/70"] {
-  border-color: #dde4dd !important;
-}
-[class~="border-slate-700"],
-[class~="border-slate-700/80"],
-[class~="border-slate-700/70"],
-[class~="border-slate-700/60"] {
-  border-color: #d5ddd6 !important;
-}
-[class~="border-white/[0.07]"],
-[class~="border-white/[0.08]"] {
-  border-color: #dde4dd !important;
-}
-
-[class~="bg-indigo-600"],
-[class~="bg-indigo-500"] {
-  background-color: #315e52 !important;
-  border-color: #315e52 !important;
-}
-[class~="hover:bg-indigo-500"]:hover,
-[class~="hover:bg-indigo-400"]:hover {
-  background-color: #244a40 !important;
-  border-color: #244a40 !important;
-}
-[class~="bg-indigo-600/30"],
-[class~="bg-indigo-600/20"],
-[class~="bg-indigo-500/15"],
-[class~="bg-indigo-500/10"],
-[class~="bg-indigo-950/40"],
-[class~="bg-indigo-950/30"] {
-  background-color: #e3ece6 !important;
-}
-[class~="border-indigo-500/40"],
-[class~="border-indigo-500/30"],
-[class~="border-indigo-500/20"],
-[class~="border-indigo-400/20"] {
-  border-color: #bfd0c4 !important;
-}
-
-[class~="bg-emerald-500/10"],
-[class~="bg-emerald-500/15"],
-[class~="bg-emerald-500/20"],
-[class~="bg-emerald-500/30"],
-[class~="bg-emerald-600"] {
-  background-color: #edf2ed !important;
-}
-[class~="bg-rose-500/10"],
-[class~="bg-rose-500/15"],
-[class~="bg-rose-500/20"] {
-  background-color: #f3f0ec !important;
-}
-[class~="border-emerald-500/30"],
-[class~="border-emerald-500/40"] {
-  border-color: #bbd9c8 !important;
-}
-[class~="border-rose-500/30"],
-[class~="border-rose-500/40"] {
-  border-color: #eccab9 !important;
-}
-
-[class*="bg-gradient-to"] {
-  background-image: none !important;
-  background-color: #ffffff !important;
-  border-color: #dde4dd !important;
-  box-shadow: 0 10px 30px rgba(37, 49, 42, 0.05) !important;
-}
-
-[class*="shadow-indigo"],
-[class*="shadow-violet"],
-[class*="shadow-purple"],
-[class*="shadow-emerald"],
-[class*="shadow-rose"] {
-  box-shadow: 0 8px 24px rgba(37, 49, 42, 0.06) !important;
-}
-
-[class*="bg-[#315e52]"] {
-  background-color: #315e52 !important;
-  border-color: #315e52 !important;
-  color: #ffffff !important;
-}
-
-/* Keep action text crisp on colored buttons. */
-[class~="bg-indigo-600"][class~="text-white"],
-[class~="bg-indigo-500"][class~="text-white"] {
-  color: #ffffff !important;
 }
 
 @keyframes slide-down {

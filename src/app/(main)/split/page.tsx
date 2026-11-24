@@ -8,6 +8,7 @@ import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 import { invalidate, RESOURCES, setCachedData, useCachedData } from '@/lib/data-cache';
 import { cleanTripName, collectTripTags } from '@/lib/trip-labels';
 import TripLabelsFields from '@/components/TripLabelsFields';
+import { CheckIcon } from '@/components/icons';
 
 interface VerifiedTripData {
   distanceKm: number;
@@ -251,35 +252,35 @@ export default function SplitPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push('/verify')}
-            className="text-slate-400 hover:text-white p-1 rounded-lg"
+            className="text-muted hover:text-ink p-1 rounded-lg"
           >
             ←
           </button>
-          <h1 className="text-2xl font-black text-white">Trip Splitting</h1>
+          <h1 className="text-2xl font-black text-ink">Trip Splitting</h1>
         </div>
-        <p className="text-xs text-slate-400 mt-1">
-          Total: <strong className="text-slate-900 font-bold">{formatCurrency(totalCost)}</strong> ({verifiedData?.fuelUsedLiters} L fuel @ ₹{verifiedData?.fuelPricePerLiter}/L)
+        <p className="text-xs text-muted mt-1">
+          Total: <strong className="text-ink font-bold">{formatCurrency(totalCost)}</strong> ({verifiedData?.fuelUsedLiters} L fuel @ ₹{verifiedData?.fuelPricePerLiter}/L)
         </p>
       </header>
 
       {errorMsg && (
-        <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300">
+        <div className="p-3.5 rounded-xl bg-danger-soft border border-danger-line text-xs text-danger">
           {errorMsg}
         </div>
       )}
 
-      <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 flex items-center justify-between">
+      <div className="rounded-2xl bg-surface border border-line p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {user?.image ? (
-            <img src={user.image} alt="" className="w-10 h-10 rounded-full border border-slate-200" />
+            <img src={user.image} alt="" className="w-10 h-10 rounded-full border border-line" />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-full bg-surface-soft text-ink-soft flex items-center justify-center font-bold">
               {user?.name?.[0] || 'Y'}
             </div>
           )}
           <div>
-            <p className="text-sm font-semibold text-white">Include me in the split</p>
-            <p className="text-xs text-slate-400">Driver share included in calculation</p>
+            <p className="text-sm font-semibold text-ink">Include me in the split</p>
+            <p className="text-xs text-muted">Driver share included in calculation</p>
           </div>
         </div>
 
@@ -291,20 +292,20 @@ export default function SplitPage() {
           aria-label="Include me in the split"
           className={cn(
             'w-12 h-7 rounded-full p-1 transition-colors duration-200 ease-in-out relative',
-            includeMe ? 'bg-[#315e52]' : 'bg-slate-300'
+            includeMe ? 'bg-primary' : 'bg-line-strong'
           )}
         >
           <div
             className={cn(
-              'w-5 h-5 rounded-full bg-white transform transition-transform duration-200 ease-in-out',
+              'w-5 h-5 rounded-full bg-surface transform transition-transform duration-200 ease-in-out',
               includeMe ? 'translate-x-5' : 'translate-x-0'
             )}
           />
         </button>
       </div>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-300">Equal split</span>
-        <span className="text-xs font-bold text-slate-900">
+      <div className="rounded-2xl border border-line bg-surface px-4 py-3 flex items-center justify-between">
+        <span className="text-xs font-semibold text-ink-soft">Equal split</span>
+        <span className="text-xs font-bold text-ink">
           {participantCount > 0 ? `1 / ${participantCount}` : '0'}
         </span>
       </div>
@@ -312,27 +313,27 @@ export default function SplitPage() {
       {/* Friends checklist */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-muted uppercase tracking-wider">
             Select Riders / Friends
           </label>
           <button
             type="button"
             onClick={() => router.push('/friends')}
-            className="text-xs text-[#315e52] hover:text-[#244a40] font-semibold"
+            className="text-xs text-primary hover:text-primary-hover font-semibold"
           >
             + Invite Friends
           </button>
         </div>
 
         {friends.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-800 p-6 text-center space-y-2">
-            <p className="text-xs text-slate-400">
+          <div className="rounded-2xl border border-dashed border-line p-6 text-center space-y-2">
+            <p className="text-xs text-muted">
               No friends connected yet. You can invite friends via email or save this as a solo trip.
             </p>
             <button
               type="button"
               onClick={() => router.push('/friends')}
-              className="text-xs px-3.5 py-1.5 rounded-lg bg-slate-50 text-[#315e52] border border-slate-200 font-semibold"
+              className="text-xs px-3.5 py-1.5 rounded-lg bg-canvas text-primary border border-line font-semibold"
             >
               Add Friend by Email →
             </button>
@@ -356,8 +357,8 @@ export default function SplitPage() {
                   className={cn(
                     'p-3.5 rounded-2xl border transition-all duration-150',
                     isSelected
-                      ? 'bg-[#edf2ed] border-slate-300'
-                      : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                      ? 'bg-surface-soft border-line-strong'
+                      : 'bg-surface border-line hover:border-line'
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -371,8 +372,8 @@ export default function SplitPage() {
                         className={cn(
                           'w-6 h-6 rounded-lg border flex items-center justify-center transition-colors',
                           isSelected
-                            ? 'bg-[#315e52] border-[#315e52] text-white'
-                            : 'border-slate-700 bg-slate-800'
+                            ? 'bg-primary border-primary text-on-primary'
+                            : 'border-line bg-surface-soft'
                         )}
                       >
                         {isSelected && (
@@ -383,22 +384,22 @@ export default function SplitPage() {
                       </div>
 
                       {fPhoto ? (
-                        <img src={fPhoto} alt="" className="w-8 h-8 rounded-full border border-slate-700" />
+                        <img src={fPhoto} alt="" className="w-8 h-8 rounded-full border border-line" />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300">
+                        <div className="w-8 h-8 rounded-full bg-surface-soft flex items-center justify-center text-xs font-bold text-ink-soft">
                           {fName?.[0] || 'F'}
                         </div>
                       )}
 
                       <div>
-                        <p className="text-sm font-semibold text-white">{fName}</p>
-                        <p className="text-[11px] text-slate-500">{friend.toEmail}</p>
+                        <p className="text-sm font-semibold text-ink">{fName}</p>
+                        <p className="text-[11px] text-muted">{friend.toEmail}</p>
                       </div>
                     </button>
 
                     {isSelected && (
                       <div className="text-right">
-                        <span className="text-sm font-bold text-[#315e52]">
+                        <span className="text-sm font-bold text-primary">
                           {formatCurrency(getParticipantShare(fUid))}
                         </span>
                       </div>
@@ -414,10 +415,10 @@ export default function SplitPage() {
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
             Add someone without the app
           </h2>
-          <p className="text-[11px] text-slate-500 mt-1">
+          <p className="text-[11px] text-muted mt-1">
             We’ll include their share and track it by name for manual settlement.
           </p>
         </div>
@@ -429,12 +430,12 @@ export default function SplitPage() {
             onChange={(event) => setGuestName(event.target.value)}
             placeholder="Enter a name"
             maxLength={80}
-            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-3 text-sm text-ink placeholder:text-muted focus:border-line-strong focus:outline-none"
           />
           <button
             type="submit"
             disabled={!guestName.trim()}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-[#315e52] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl border border-line bg-canvas px-4 py-3 text-xs font-semibold text-primary transition-colors hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
           >
             Add guest
           </button>
@@ -449,8 +450,8 @@ export default function SplitPage() {
                   className={cn(
                     'flex items-center justify-between rounded-2xl border p-3.5 transition-colors',
                     isSelected
-                      ? 'border-slate-300 bg-[#edf2ed]'
-                      : 'border-slate-800 bg-slate-900/60'
+                      ? 'border-line-strong bg-surface-soft'
+                      : 'border-line bg-surface'
                   )}
                 >
                   <button
@@ -463,27 +464,27 @@ export default function SplitPage() {
                       className={cn(
                         'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border',
                         isSelected
-                          ? 'border-[#315e52] bg-[#315e52] text-white'
-                          : 'border-slate-700 bg-slate-800'
+                          ? 'border-primary bg-primary text-on-primary'
+                          : 'border-line bg-surface-soft'
                       )}
                     >
-                      {isSelected && <span aria-hidden="true">✓</span>}
+                      {isSelected && <CheckIcon size={14} strokeWidth={2.4} />}
                     </span>
                     <span className="min-w-0">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-slate-300">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-soft text-xs font-bold text-ink-soft">
                         {guest.name[0]?.toUpperCase()}
                       </span>
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-white">{guest.name}</span>
-                      <span className="block truncate text-[11px] text-slate-500">
+                      <span className="block truncate text-sm font-semibold text-ink">{guest.name}</span>
+                      <span className="block truncate text-[11px] text-muted">
                         {guest.linkedUid ? 'Account linked' : guest.email || 'Guest · no account needed'}
                       </span>
                     </span>
                   </button>
                   <div className="ml-3 flex shrink-0 items-center gap-3">
                     {isSelected && (
-                      <span className="text-sm font-bold text-[#315e52]">
+                      <span className="text-sm font-bold text-primary">
                         {formatCurrency(getParticipantShare(`guest:${guest.id}`))}
                       </span>
                     )}
@@ -491,7 +492,7 @@ export default function SplitPage() {
                       type="button"
                       onClick={() => router.push('/friends')}
                       aria-label={`Edit ${guest.name}`}
-                      className="rounded-lg px-2 py-1 text-xs text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                      className="rounded-lg px-2 py-1 text-xs text-muted transition-colors hover:bg-surface hover:text-ink"
                     >
                       Edit
                     </button>
@@ -505,8 +506,8 @@ export default function SplitPage() {
 
       {/* Optional trip name and tags */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Trip details</h2>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">Trip details</h2>
+        <div className="rounded-2xl border border-line bg-surface p-4">
           <TripLabelsFields
             name={tripName}
             onNameChange={setTripName}
@@ -518,18 +519,18 @@ export default function SplitPage() {
       </section>
 
       {/* Summary card */}
-      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-2">
-        <div className="flex justify-between text-xs text-slate-400">
+      <div className="rounded-2xl bg-canvas border border-line p-4 space-y-2">
+        <div className="flex justify-between text-xs text-muted">
           <span>Active Participants:</span>
-          <span className="text-white font-semibold">{participantCount} person(s)</span>
+          <span className="text-ink font-semibold">{participantCount} person(s)</span>
         </div>
-        <div className="flex justify-between text-xs text-slate-400">
+        <div className="flex justify-between text-xs text-muted">
           <span>Total Fuel Bill:</span>
-          <span className="text-white font-semibold">{formatCurrency(totalCost)}</span>
+          <span className="text-ink font-semibold">{formatCurrency(totalCost)}</span>
         </div>
-        <div className="border-t border-slate-800 pt-2 flex justify-between items-baseline">
-          <span className="text-xs font-semibold text-slate-600">Typical share:</span>
-          <span className="text-xl font-black text-slate-900">
+        <div className="border-t border-line pt-2 flex justify-between items-baseline">
+          <span className="text-xs font-semibold text-muted">Typical share:</span>
+          <span className="text-xl font-black text-ink">
             {participantCount > 0 ? formatCurrency(totalCost / participantCount) : formatCurrency(0)}
           </span>
         </div>
@@ -540,11 +541,11 @@ export default function SplitPage() {
         type="button"
         onClick={handleSaveTrip}
         disabled={participantCount === 0 || saving}
-        className="w-full py-4 bg-[#315e52] hover:bg-[#244a40] active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-500 text-white font-semibold rounded-2xl transition-all text-base flex items-center justify-center gap-2"
+        className="w-full py-4 bg-primary hover:bg-primary-hover active:scale-[0.99] disabled:bg-surface-sunken disabled:text-muted text-on-primary font-semibold rounded-2xl transition-all text-base flex items-center justify-center gap-2"
       >
         {saving ? (
           <span className="flex items-center gap-2">
-            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <span className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
             Posting to ledger...
           </span>
         ) : (

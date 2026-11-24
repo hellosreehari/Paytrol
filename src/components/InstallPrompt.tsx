@@ -68,17 +68,17 @@ export default function InstallPrompt() {
   return (
     <aside
       aria-label="Add to Homescreen"
-      className="fixed top-3 left-3 right-3 sm:left-auto sm:right-4 sm:max-w-sm z-50 bg-slate-900/95 border border-indigo-500/40 text-white rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-slide-down"
+      className="fixed top-3 left-3 right-3 sm:left-auto sm:right-4 sm:max-w-sm z-50 bg-surface border border-primary-line text-ink rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-slide-down"
     >
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center shrink-0">
-          <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-10 h-10 rounded-xl bg-primary-soft border border-primary-line flex items-center justify-center shrink-0">
+          <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18v-5.25m0 0a6.002 6.002 0 00-4-5.659V5a2 2 0 114 0v2.091a6.002 6.002 0 004 5.659M12 12.75h.008v.008H12v-.008z" />
           </svg>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-white">Add Paytrol to Home Screen</p>
-          <p className="text-xs text-slate-300 mt-0.5">
+          <p className="font-semibold text-sm text-ink">Add Paytrol to Home Screen</p>
+          <p className="text-xs text-ink-soft mt-0.5">
             {isIOS
               ? 'Tap Share ⎋ below, then select "Add to Home Screen" for instant camera access.'
               : 'Install our web app for full screen, fast camera scans & offline access.'}
@@ -86,7 +86,7 @@ export default function InstallPrompt() {
         </div>
         <button
           onClick={handleDismiss}
-          className="text-slate-400 hover:text-white p-1 rounded-lg"
+          className="text-muted hover:text-ink p-1 rounded-lg"
           aria-label="Dismiss"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -98,14 +98,14 @@ export default function InstallPrompt() {
       <div className="mt-3 flex justify-end gap-2">
         <button
           onClick={handleDismiss}
-          className="text-xs px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
+          className="text-xs px-3 py-1.5 rounded-lg text-muted hover:text-ink transition-colors"
         >
           Not now
         </button>
         {deferredPrompt && (
           <button
             onClick={handleInstallClick}
-            className="text-xs px-3.5 py-1.5 bg-[#315e52] hover:bg-[#244a40] text-white rounded-lg font-medium transition-colors"
+            className="text-xs px-3.5 py-1.5 bg-primary hover:bg-primary-hover text-on-primary rounded-lg font-medium transition-colors"
           >
             Add to Homescreen
           </button>

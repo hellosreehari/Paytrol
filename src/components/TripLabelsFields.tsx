@@ -58,8 +58,8 @@ export default function TripLabelsFields({
   return (
     <div className="space-y-3">
       <label htmlFor={nameId} className="block space-y-1.5">
-        <span className="text-xs font-medium text-slate-600">
-          Trip name <span className="font-normal text-slate-400">(optional)</span>
+        <span className="text-xs font-medium text-muted">
+          Trip name <span className="font-normal text-subtle">(optional)</span>
         </span>
         <input
           id={nameId}
@@ -67,13 +67,13 @@ export default function TripLabelsFields({
           onChange={(event) => onNameChange(event.target.value)}
           maxLength={TRIP_NAME_MAX_LENGTH}
           placeholder="e.g. Office run, Goa weekend"
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-slate-400"
+          className="w-full rounded-xl border border-line bg-canvas px-3.5 py-3 text-sm text-ink outline-none focus:border-line-strong"
         />
       </label>
 
       <div className="space-y-1.5">
-        <label htmlFor={tagId} className="block text-xs font-medium text-slate-600">
-          Tags <span className="font-normal text-slate-400">(optional, up to {TRIP_TAGS_MAX})</span>
+        <label htmlFor={tagId} className="block text-xs font-medium text-muted">
+          Tags <span className="font-normal text-subtle">(optional, up to {TRIP_TAGS_MAX})</span>
         </label>
 
         {tags.length > 0 && (
@@ -83,11 +83,11 @@ export default function TripLabelsFields({
                 type="button"
                 key={tag}
                 onClick={() => removeTag(tag)}
-                className="inline-flex items-center gap-1 rounded-full border border-[#cfdcd2] bg-[#edf2ed] px-2.5 py-1 text-xs font-medium text-[#315e52]"
+                className="inline-flex items-center gap-1 rounded-full border border-primary-line bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary"
                 aria-label={`Remove tag ${tag}`}
               >
                 <span>#{tag}</span>
-                <span aria-hidden="true" className="text-[#6d806f]">×</span>
+                <span aria-hidden="true" className="text-muted">×</span>
               </button>
             ))}
           </div>
@@ -111,13 +111,13 @@ export default function TripLabelsFields({
               maxLength={TRIP_TAG_MAX_LENGTH * 3}
               placeholder="office, weekend…"
               enterKeyHint="done"
-              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 outline-none focus:border-slate-400"
+              className="min-w-0 flex-1 rounded-xl border border-line bg-canvas px-3 py-2.5 text-xs text-ink outline-none focus:border-line-strong"
             />
             <button
               type="button"
               onClick={commitDraft}
               disabled={!tagDraft.trim()}
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-[#315e52] disabled:opacity-50"
+              className="rounded-xl border border-line px-3 py-2.5 text-xs font-semibold text-primary disabled:opacity-50"
             >
               Add
             </button>
@@ -131,7 +131,7 @@ export default function TripLabelsFields({
                 type="button"
                 key={tag}
                 onClick={() => addTag(tag)}
-                className="rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-[11px] text-slate-500 hover:border-slate-400 hover:text-slate-700"
+                className="rounded-full border border-dashed border-line-strong px-2.5 py-1 text-[11px] text-muted hover:text-ink"
               >
                 + {tag}
               </button>

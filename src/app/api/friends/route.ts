@@ -1,9 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { createDocument, queryDocuments, getDocument, updateDocument, deleteDocument } from '@/lib/cosmos';
+import { createDocument, queryDocuments, getDocument, updateDocument, deleteDocument, equalsIgnoreCase } from '@/lib/db';
 import type { Friendship, UserProfile } from '@/types';
 import { generateId } from '@/lib/utils';
+
+/**
+ * Every friendship document involving this user, filtered in code so the
+ * result is exact on both Cosmos and the in-memory store.
+ */
+async function getRelationships(uid: string, email: string | undefined): Promise<Friendship[]> {
+  const docs = await queryDocuments<Friendship>(
+    'friendships',
+    {
+      $or: [
+        { fromUid: uid },
+        { toUid: uid },
+        ...(email ? [{ toEmail: equalsIgnoreCase(email) }] : []),
+      ],
+    }
+  );
+  const seen = new Set<string>();
+  return docs.filter((doc) => {
+    if (seen.has(doc.id)) return false;
+    seen.add(doc.id);
+    return (
+      doc.fromUid === uid ||
+      doc.toUid === uid ||
+      (!!email && doc.toEmail?.toLowerCase() === email && doc.fromUid !== uid)
+    );
+  });
+}
+
+/** A stable key for "the other person" so mutual invites collapse into one entry. */
+function otherPartyKey(doc: Friendship, uid: string): string {
+  if (doc.fromUid === uid) return doc.toUid || doc.toEmail.toLowerCase();
+  return doc.fromUid;
+}
 
 export async function GET() {
   try {
@@ -15,35 +48,18 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // These lookups don't depend on each other, so run them together instead
-    // of one after another (each is a cross-partition Cosmos query).
-    const [unlinkedInvites, sent, received] = await Promise.all([
+    // The auto-link lookup and the relationship query don't depend on each
+    // other (the relationship query already matches invites by email), so
+    // run them together instead of one after another.
+    const [unlinkedInvites, relationships] = await Promise.all([
       // Invites sent to this user's email before they signed up
       email
-        ? queryDocuments<Friendship>(
-            'friendships',
-            'SELECT * FROM c WHERE c.toEmail = @email AND (c.toUid = null OR c.toUid = "")',
-            [{ name: '@email', value: email }]
-          )
+        ? queryDocuments<Friendship>('friendships', { toEmail: email, $or: [{ toUid: null }, { toUid: '' }] })
         : Promise.resolve([] as Friendship[]),
-      // 1. Invites sent by current user
-      queryDocuments<Friendship>(
-        'friendships',
-        'SELECT * FROM c WHERE c.fromUid = @uid',
-        [{ name: '@uid', value: uid }]
-      ),
-      // 2. Invites received by current user (by uid, or by email before linking)
-      queryDocuments<Friendship>(
-        'friendships',
-        'SELECT * FROM c WHERE c.toUid = @uid OR (c.toEmail = @email AND c.fromUid != @uid)',
-        [
-          { name: '@uid', value: uid },
-          { name: '@email', value: email || '' },
-        ]
-      ),
+      getRelationships(uid, email),
     ]);
 
-    // Auto-link those invites to this account
+    // Link those invites to this account
     await Promise.all(
       unlinkedInvites.map((inv) => {
         inv.toUid = uid;
@@ -54,12 +70,21 @@ export async function GET() {
       })
     );
 
-    // Filter duplicates and partition into tabs
-    const all = [...sent, ...received];
-    const friends = all.filter((f) => f.status === 'accepted');
-    const pendingSent = sent.filter((f) => f.status === 'pending');
-    const pendingReceived = received.filter(
-      (f) => f.status === 'pending' && f.fromUid !== uid
+    // One entry per person: mutual or repeated invites must not show twice.
+    const friends: Friendship[] = [];
+    const friendKeys = new Set<string>();
+    for (const doc of relationships) {
+      if (doc.status !== 'accepted') continue;
+      const key = otherPartyKey(doc, uid);
+      if (friendKeys.has(key)) continue;
+      friendKeys.add(key);
+      friends.push(doc);
+    }
+    const pendingSent = relationships.filter(
+      (doc) => doc.status === 'pending' && doc.fromUid === uid && !friendKeys.has(otherPartyKey(doc, uid))
+    );
+    const pendingReceived = relationships.filter(
+      (doc) => doc.status === 'pending' && doc.fromUid !== uid && !friendKeys.has(otherPartyKey(doc, uid))
     );
 
     return NextResponse.json({
@@ -105,15 +130,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if invite or friendship already exists
-    const existing = await queryDocuments<Friendship>(
-      'friendships',
-      'SELECT * FROM c WHERE (c.fromUid = @uid AND c.toEmail = @email) OR (c.toUid = @uid AND c.fromEmail = @email)',
-      [
-        { name: '@uid', value: uid },
-        { name: '@email', value: targetEmail },
-      ]
+    // Check if invite or friendship already exists, in either direction
+    const myEmail = session?.user?.email?.toLowerCase();
+    const existing = (await getRelationships(uid, myEmail)).filter((invite) =>
+      invite.fromUid === uid
+        ? invite.toEmail.toLowerCase() === targetEmail
+        : invite.fromEmail?.toLowerCase() === targetEmail
     );
+
+    // They already invited us: accept that invite instead of creating a second one.
+    const theirInvite = existing.find((invite) => invite.status === 'pending' && invite.fromUid !== uid);
+    if (theirInvite && !existing.some((invite) => invite.status === 'accepted')) {
+      theirInvite.status = 'accepted';
+      theirInvite.toUid = uid;
+      theirInvite.updatedAt = new Date().toISOString();
+      const accepted = await updateDocument('friendships', theirInvite);
+      return NextResponse.json({
+        success: true,
+        data: accepted,
+        message: `${theirInvite.fromName || 'They'} had already invited you, so you're now friends.`,
+      });
+    }
 
     if (existing.some((invite) => invite.status === 'accepted')) {
       return NextResponse.json(
@@ -135,8 +172,7 @@ export async function POST(req: NextRequest) {
     // Check if target user already exists in database
     const targetUsers = await queryDocuments<UserProfile>(
       'users',
-      'SELECT * FROM c WHERE c.email = @email',
-      [{ name: '@email', value: targetEmail }]
+      { email: targetEmail }
     );
     const targetUser = targetUsers[0] || null;
 
@@ -144,7 +180,7 @@ export async function POST(req: NextRequest) {
       id: generateId(),
       fromUid: uid,
       fromName: session?.user?.name || 'Driver',
-      fromEmail: session?.user?.email || 'driver@paytrol.app',
+      fromEmail: myEmail || 'driver@paytrol.app',
       fromPhoto: session?.user?.image || null,
       toUid: targetUser?.id || null,
       toEmail: targetEmail,

@@ -5,6 +5,7 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { Trip } from '@/types';
 import { RESOURCES, useCachedData } from '@/lib/data-cache';
+import { CheckCircleIcon } from '@/components/icons';
 
 interface NormalizedBalance {
   id: string;
@@ -113,8 +114,8 @@ export default function BalancesPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-black text-white">Balances &amp; Settlements</h1>
-        <p className="text-xs text-slate-400 mt-1">
+        <h1 className="text-2xl font-black text-ink">Balances &amp; Settlements</h1>
+        <p className="text-xs text-muted mt-1">
           Net amounts across your trips. Record payments here when they’re settled.
         </p>
       </header>
@@ -125,8 +126,8 @@ export default function BalancesPage() {
           className={cn(
             'rounded-xl border px-3.5 py-3 text-xs',
             feedback.type === 'success'
-              ? 'border-slate-300 bg-slate-50 text-slate-700'
-              : 'border-red-500/30 bg-red-500/10 text-red-300'
+              ? 'border-line-strong bg-canvas text-ink-soft'
+              : 'border-danger-line bg-danger-soft text-danger'
           )}
         >
           {feedback.message}
@@ -134,24 +135,24 @@ export default function BalancesPage() {
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-3xl bg-[#edf4ed] border border-[#d9e5d9] p-4 space-y-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#52705b]">
+        <div className="rounded-3xl bg-surface-soft border border-line p-4 space-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             Owed to you
           </span>
-          <p className="text-2xl font-black text-slate-900">{formatCurrency(totalOwedToYou)}</p>
-          <p className="text-[10px] text-[#6d806f]">From shared fuel bills</p>
+          <p className="text-2xl font-black text-ink">{formatCurrency(totalOwedToYou)}</p>
+          <p className="text-[10px] text-muted">From shared fuel bills</p>
         </div>
-        <div className="rounded-3xl bg-[#f4efe6] border border-[#e7dcc8] p-4 space-y-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#80684c]">
+        <div className="rounded-3xl bg-warning-soft border border-warning-line p-4 space-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-warning">
             You owe
           </span>
-          <p className="text-2xl font-black text-slate-900">{formatCurrency(totalYouOwe)}</p>
-          <p className="text-[10px] text-[#8b7a60]">To friends</p>
+          <p className="text-2xl font-black text-ink">{formatCurrency(totalYouOwe)}</p>
+          <p className="text-[10px] text-warning">To friends</p>
         </div>
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs text-slate-400">
+        <div className="flex items-center justify-between text-xs text-muted">
           <span className="font-semibold uppercase tracking-wider">Net Friend Balances</span>
           <span>{activeBalances.length} active</span>
         </div>
@@ -159,14 +160,14 @@ export default function BalancesPage() {
         {loading ? (
           <div className="space-y-2.5">
             {[1, 2].map((i) => (
-              <div key={i} className="h-28 bg-slate-900/60 rounded-3xl animate-pulse" />
+              <div key={i} className="h-28 bg-surface rounded-3xl animate-pulse" />
             ))}
           </div>
         ) : activeBalances.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-800 p-10 text-center space-y-2">
-            <span className="text-3xl">🎉</span>
-            <p className="text-sm font-semibold text-white">All balances are settled!</p>
-            <p className="text-xs text-slate-500 max-w-xs mx-auto">
+          <div className="rounded-3xl border border-dashed border-line p-10 text-center space-y-2">
+            <CheckCircleIcon size={36} strokeWidth={1.6} className="mx-auto text-primary" />
+            <p className="text-sm font-semibold text-ink">All balances are settled!</p>
+            <p className="text-xs text-muted max-w-xs mx-auto">
               When you or your friends split trips, the net balances will automatically update here.
             </p>
           </div>
@@ -178,35 +179,35 @@ export default function BalancesPage() {
               return (
                 <div
                   key={`${bal.odataId || bal.id}-${idx}`}
-                  className="rounded-3xl bg-slate-900/80 border border-slate-800 p-4 space-y-3 shadow-lg"
+                  className="rounded-3xl bg-surface border border-line p-4 space-y-3 shadow-lg"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       {bal.friendPhoto ? (
-                        <img src={bal.friendPhoto} alt="" className="w-11 h-11 rounded-2xl border border-slate-700" />
+                        <img src={bal.friendPhoto} alt="" className="w-11 h-11 rounded-2xl border border-line" />
                       ) : (
-                        <div className="w-11 h-11 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-base">
+                        <div className="w-11 h-11 rounded-2xl bg-primary-soft text-primary flex items-center justify-center font-bold text-base">
                           {bal.friendName?.[0] || 'F'}
                         </div>
                       )}
                       <div>
-                        <p className="text-sm font-bold text-white">{bal.friendName}</p>
+                        <p className="text-sm font-bold text-ink">{bal.friendName}</p>
                         {bal.isGuest && (
-                          <p className="text-[10px] text-slate-500">Guest · tracked by name</p>
+                          <p className="text-[10px] text-muted">Guest · tracked by name</p>
                         )}
-                        <p className={cn('text-xs font-semibold text-slate-600')}>
+                        <p className={cn('text-xs font-semibold text-muted')}>
                           {isOwed ? `${bal.friendName} owes you` : `You owe ${bal.friendName}`}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={cn('text-xl font-black text-slate-900')}>
+                      <p className={cn('text-xl font-black text-ink')}>
                         {formatCurrency(absAmount)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center gap-4">
+                  <div className="pt-2 border-t border-line flex items-center gap-4">
                     <button
                       type="button"
                       onClick={() =>
@@ -214,7 +215,7 @@ export default function BalancesPage() {
                           current === bal.friendUid ? null : bal.friendUid
                         )
                       }
-                      className="text-xs font-semibold text-[#315e52] hover:text-[#244a40]"
+                      className="text-xs font-semibold text-primary hover:text-primary-hover"
                     >
                       {expandedFriendUid === bal.friendUid ? 'Hide split' : 'View split'}
                     </button>
@@ -223,43 +224,43 @@ export default function BalancesPage() {
                         type="button"
                         onClick={() => handleSettle(bal.odataId)}
                         disabled={settlingId === bal.odataId}
-                        className="text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-50"
+                        className="text-xs font-semibold text-muted hover:text-ink-soft disabled:opacity-50"
                       >
                         {settlingId === bal.odataId ? 'Saving…' : 'Mark settled'}
                       </button>
                     ) : (
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-muted">
                         {bal.friendName} marks this settled once paid
                       </span>
                     )}
                   </div>
 
                   {expandedFriendUid === bal.friendUid && (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                    <div className="rounded-2xl border border-line bg-canvas p-3 space-y-2">
                       {getTripBreakdown(bal.friendUid).length === 0 ? (
-                        <p className="text-xs text-slate-500">No trip split details found.</p>
+                        <p className="text-xs text-muted">No trip split details found.</p>
                       ) : (
                         getTripBreakdown(bal.friendUid).map(({ trip, amount, friendOwesYou }) => (
                           <div
                             key={trip.id}
-                            className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2 last:border-0 last:pb-0"
+                            className="flex items-center justify-between gap-3 border-b border-line pb-2 last:border-0 last:pb-0"
                           >
                             <div>
-                              <p className="text-xs font-semibold text-slate-800">
+                              <p className="text-xs font-semibold text-ink">
                                 {trip.name || `${trip.distanceKm} km trip`}
                               </p>
-                              <p className="text-[10px] text-slate-500">
+                              <p className="text-[10px] text-muted">
                                 {friendOwesYou ? 'Friend share' : 'Your share'} ·{' '}
                                 {formatCurrency(trip.totalCost)} total
                               </p>
                             </div>
-                            <p className="text-xs font-bold text-slate-800">
+                            <p className="text-xs font-bold text-ink">
                               {friendOwesYou ? '+' : '−'}{formatCurrency(amount)}
                             </p>
                           </div>
                         ))
                       )}
-                      <p className="pt-1 text-[10px] text-slate-500">
+                      <p className="pt-1 text-[10px] text-muted">
                         Net {formatCurrency(absAmount)} · opposite trip directions cancel automatically.
                       </p>
                     </div>

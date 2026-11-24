@@ -1,4 +1,4 @@
-import { queryDocuments, upsertDocumentAtomically } from '@/lib/cosmos';
+import { queryDocuments, upsertDocumentAtomically } from '@/lib/db';
 import { roundMoney } from '@/lib/money';
 import type { Balance, Friendship } from '@/types';
 
@@ -57,11 +57,7 @@ export async function adjustBalance(
 export async function getAcceptedFriendUids(uid: string): Promise<Set<string>> {
   const relationships = await queryDocuments<Friendship>(
     'friendships',
-    'SELECT * FROM c WHERE c.status = @status AND (c.fromUid = @uid OR c.toUid = @uid)',
-    [
-      { name: '@status', value: 'accepted' },
-      { name: '@uid', value: uid },
-    ]
+    { status: 'accepted', $or: [{ fromUid: uid }, { toUid: uid }] }
   );
   const friends = new Set<string>();
   for (const relationship of relationships) {

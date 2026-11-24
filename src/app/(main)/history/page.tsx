@@ -230,14 +230,14 @@ export default function HistoryPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-black text-white">Trip History</h1>
-        <p className="text-xs text-slate-400 mt-1">
+        <h1 className="text-2xl font-black text-ink">Trip History</h1>
+        <p className="text-xs text-muted mt-1">
           Every trip logged with attached dashboard photo, math breakdown, and participant shares.
         </p>
       </header>
 
       {notice && (
-        <p role="status" className="text-xs text-[#315e52]">
+        <p role="status" className="text-xs text-primary">
           {notice}
         </p>
       )}
@@ -249,8 +249,8 @@ export default function HistoryPage() {
             onClick={() => setTagFilter(null)}
             aria-pressed={!activeTagFilter}
             className={!activeTagFilter
-              ? 'shrink-0 rounded-full bg-[#315e52] px-3 py-1.5 text-xs font-semibold text-white'
-              : 'shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600'}
+              ? 'shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary'
+              : 'shrink-0 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted'}
           >
             All
           </button>
@@ -263,8 +263,8 @@ export default function HistoryPage() {
                 onClick={() => setTagFilter(selected ? null : tag)}
                 aria-pressed={selected}
                 className={selected
-                  ? 'shrink-0 rounded-full bg-[#315e52] px-3 py-1.5 text-xs font-semibold text-white'
-                  : 'shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600'}
+                  ? 'shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary'
+                  : 'shrink-0 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted'}
               >
                 #{tag}
               </button>
@@ -276,13 +276,13 @@ export default function HistoryPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-44 bg-slate-900/60 rounded-3xl animate-pulse" />
+            <div key={i} className="h-44 bg-surface rounded-3xl animate-pulse" />
           ))}
         </div>
       ) : trips.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-800 p-12 text-center space-y-2">
-          <p className="text-sm font-semibold text-white">No trips recorded yet</p>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto">
+        <div className="rounded-3xl border border-dashed border-line p-12 text-center space-y-2">
+          <p className="text-sm font-semibold text-ink">No trips recorded yet</p>
+          <p className="text-xs text-muted max-w-xs mx-auto">
             Scan your car dashboard cluster to log your first trip!
           </p>
         </div>
@@ -291,7 +291,7 @@ export default function HistoryPage() {
           {visibleTrips.map((trip) => (
             <div
               key={trip.id}
-              className="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm"
+              className="rounded-3xl border border-line bg-surface overflow-hidden shadow-sm"
             >
               {trip.photoURL && (
                 <div className="relative aspect-[21/9] bg-black">
@@ -302,7 +302,7 @@ export default function HistoryPage() {
                     decoding="async"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-[10px] text-slate-300">
+                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-surface/90 backdrop-blur-md text-[10px] text-ink-soft">
                     {formatRelativeTime(trip.createdAt)}
                   </div>
                 </div>
@@ -311,10 +311,10 @@ export default function HistoryPage() {
               <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
-                    <h3 className="text-base font-bold text-white break-words">
+                    <h3 className="text-base font-bold text-ink break-words">
                       {trip.name || `${trip.distanceKm} km Trip`}
                     </h3>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-muted">
                       {trip.name ? `${trip.distanceKm} km · ` : ''}Logged by {trip.creatorName}
                     </p>
                     {trip.tags && trip.tags.length > 0 && (
@@ -324,7 +324,7 @@ export default function HistoryPage() {
                             type="button"
                             key={tag}
                             onClick={() => setTagFilter(tag)}
-                            className="rounded-full bg-[#edf2ed] px-2 py-0.5 text-[11px] font-medium text-[#315e52]"
+                            className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary"
                           >
                             #{tag}
                           </button>
@@ -334,14 +334,14 @@ export default function HistoryPage() {
                   </div>
                   <div className="flex items-start gap-2 text-right">
                     <div>
-                      <span className="text-lg font-black text-slate-900">{formatCurrency(trip.totalCost)}</span>
-                      <span className="text-[10px] text-slate-500 block">{trip.fuelUsedLiters.toFixed(2)} L fuel</span>
+                      <span className="text-lg font-black text-ink">{formatCurrency(trip.totalCost)}</span>
+                      <span className="text-[10px] text-muted block">{trip.fuelUsedLiters.toFixed(2)} L fuel</span>
                     </div>
 {trip.creatorUid === currentUserId && (
                     <button
                       type="button"
                       onClick={() => openEdit(trip)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-muted transition-colors hover:border-line-strong hover:text-ink"
                       aria-label={`Edit trip ${trip.name || `for ${trip.distanceKm} km`}`}
                       title="Edit trip"
                     >
@@ -364,34 +364,34 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 bg-slate-800/40 p-2.5 rounded-xl border border-slate-800/80 text-center text-xs">
+                <div className="grid grid-cols-3 gap-2 bg-surface-soft p-2.5 rounded-xl border border-line text-center text-xs">
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Mileage</span>
-                    <span className="font-semibold text-white">{trip.avgMileageKmpl} km/L</span>
+                    <span className="text-[10px] text-muted block">Mileage</span>
+                    <span className="font-semibold text-ink">{trip.avgMileageKmpl} km/L</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Fuel Rate</span>
-                    <span className="font-semibold text-white">₹{trip.fuelPricePerLiter}/L</span>
+                    <span className="text-[10px] text-muted block">Fuel Rate</span>
+                    <span className="font-semibold text-ink">₹{trip.fuelPricePerLiter}/L</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Split Mode</span>
-                    <span className="font-semibold text-white capitalize">{trip.splitMode}</span>
+                    <span className="text-[10px] text-muted block">Split Mode</span>
+                    <span className="font-semibold text-ink capitalize">{trip.splitMode}</span>
                   </div>
                 </div>
 
                 {trip.participants && trip.participants.length > 0 && (
                   <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                    <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">
                       Riders ({trip.participants.length})
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {trip.participants.map((p, idx) => (
                         <div
                           key={idx}
-                          className="inline-flex items-center gap-1.5 bg-slate-800/60 border border-slate-700/60 px-2 py-1 rounded-lg text-xs"
+                          className="inline-flex items-center gap-1.5 bg-surface-soft border border-line px-2 py-1 rounded-lg text-xs"
                         >
-                          <span className="text-white font-medium">{p.displayName}</span>
-                          <span className="text-indigo-400 font-bold">{formatCurrency(p.shareAmount)}</span>
+                          <span className="text-ink font-medium">{p.displayName}</span>
+                          <span className="text-primary font-bold">{formatCurrency(p.shareAmount)}</span>
                         </div>
                       ))}
                     </div>
@@ -405,7 +405,7 @@ export default function HistoryPage() {
 
       {editingTrip && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/30 px-4 pb-24 sm:items-center sm:pb-0"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-surface/90 px-4 pb-24 sm:items-center sm:pb-0"
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-trip-title"
@@ -415,14 +415,14 @@ export default function HistoryPage() {
         >
           <form
             onSubmit={saveEdit}
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-xl"
+            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl border border-line bg-surface p-5 shadow-xl"
           >
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <h2 id="edit-trip-title" className="text-base font-bold text-slate-900">
+                <h2 id="edit-trip-title" className="text-base font-bold text-ink">
                   Edit trip
                 </h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted">
                   Updating this trip recalculates its split and balance.
                 </p>
               </div>
@@ -430,7 +430,7 @@ export default function HistoryPage() {
                 type="button"
                 onClick={closeEdit}
                 disabled={savingEdit}
-                className="text-xl leading-none text-slate-400 hover:text-slate-700"
+                className="text-xl leading-none text-muted hover:text-ink-soft"
                 aria-label="Close"
               >
                 ×
@@ -438,14 +438,14 @@ export default function HistoryPage() {
             </div>
 
             {editError && (
-              <p role="alert" className="mb-3 text-xs text-red-600">
+              <p role="alert" className="mb-3 text-xs text-danger">
                 {editError}
               </p>
             )}
 
             <div className="space-y-3">
               <label className="block space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Distance driven (km)</span>
+                <span className="text-xs font-medium text-muted">Distance driven (km)</span>
                 <input
                   type="number"
                   min="0.1"
@@ -453,11 +453,11 @@ export default function HistoryPage() {
                   required
                   value={distanceDraft}
                   onChange={(event) => setDistanceDraft(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
+                  className="w-full rounded-xl border border-line bg-canvas px-3.5 py-3 text-sm font-semibold text-ink outline-none focus:border-line-strong"
                 />
               </label>
               <label className="block space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Mileage (km/L)</span>
+                <span className="text-xs font-medium text-muted">Mileage (km/L)</span>
                 <input
                   type="number"
                   min="0.1"
@@ -465,11 +465,11 @@ export default function HistoryPage() {
                   required
                   value={mileageDraft}
                   onChange={(event) => setMileageDraft(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
+                  className="w-full rounded-xl border border-line bg-canvas px-3.5 py-3 text-sm font-semibold text-ink outline-none focus:border-line-strong"
                 />
               </label>
               <label className="block space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Fuel price (₹/L)</span>
+                <span className="text-xs font-medium text-muted">Fuel price (₹/L)</span>
                 <input
                   type="number"
                   min="1"
@@ -477,12 +477,12 @@ export default function HistoryPage() {
                   required
                   value={fuelPriceDraft}
                   onChange={(event) => setFuelPriceDraft(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-slate-400"
+                  className="w-full rounded-xl border border-line bg-canvas px-3.5 py-3 text-sm font-semibold text-ink outline-none focus:border-line-strong"
                 />
               </label>
             </div>
 
-            <div className="mt-4 border-t border-slate-200 pt-4">
+            <div className="mt-4 border-t border-line pt-4">
               <TripLabelsFields
                 name={nameDraft}
                 onNameChange={setNameDraft}
@@ -492,10 +492,10 @@ export default function HistoryPage() {
               />
             </div>
 
-            <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
+            <div className="mt-4 space-y-3 border-t border-line pt-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700">People in this split</span>
-                <span className="text-[11px] text-slate-500">
+                <span className="text-xs font-semibold text-ink-soft">People in this split</span>
+                <span className="text-[11px] text-muted">
                   {(includeCreatorDraft ? 1 : 0) + selectedParticipantIds.length} people
                 </span>
               </div>
@@ -505,18 +505,18 @@ export default function HistoryPage() {
                 role="switch"
                 aria-checked={includeCreatorDraft}
                 onClick={() => setIncludeCreatorDraft((current) => !current)}
-                className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5"
+                className="flex w-full items-center justify-between rounded-xl border border-line bg-surface px-3 py-2.5"
               >
-                <span className="text-xs font-medium text-slate-800">Include me</span>
+                <span className="text-xs font-medium text-ink">Include me</span>
                 <span
                   className={includeCreatorDraft
-                    ? 'h-5 w-9 rounded-full bg-[#315e52] p-0.5'
-                    : 'h-5 w-9 rounded-full bg-slate-300 p-0.5'}
+                    ? 'h-5 w-9 rounded-full bg-primary p-0.5'
+                    : 'h-5 w-9 rounded-full bg-line-strong p-0.5'}
                 >
                   <span
                     className={includeCreatorDraft
-                      ? 'block h-4 w-4 translate-x-4 rounded-full bg-white'
-                      : 'block h-4 w-4 rounded-full bg-white'}
+                      ? 'block h-4 w-4 translate-x-4 rounded-full bg-surface'
+                      : 'block h-4 w-4 rounded-full bg-surface'}
                   />
                 </span>
               </button>
@@ -536,11 +536,11 @@ export default function HistoryPage() {
                     onClick={() => toggleParticipant(key)}
                     aria-pressed={selected}
                     className={selected
-                      ? 'flex w-full items-center justify-between rounded-xl border border-slate-300 bg-[#edf2ed] px-3 py-2.5'
-                      : 'flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5'}
+                      ? 'flex w-full items-center justify-between rounded-xl border border-line-strong bg-surface-soft px-3 py-2.5'
+                      : 'flex w-full items-center justify-between rounded-xl border border-line bg-surface px-3 py-2.5'}
                   >
-                    <span className="text-xs font-medium text-slate-800">{friendName}</span>
-                    <span className="text-xs text-slate-500">{selected ? 'Added' : 'Add'}</span>
+                    <span className="text-xs font-medium text-ink">{friendName}</span>
+                    <span className="text-xs text-muted">{selected ? 'Added' : 'Add'}</span>
                   </button>
                 );
               })}
@@ -555,11 +555,11 @@ export default function HistoryPage() {
                     onClick={() => toggleParticipant(key)}
                     aria-pressed={selected}
                     className={selected
-                      ? 'flex w-full items-center justify-between rounded-xl border border-slate-300 bg-[#edf2ed] px-3 py-2.5'
-                      : 'flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5'}
+                      ? 'flex w-full items-center justify-between rounded-xl border border-line-strong bg-surface-soft px-3 py-2.5'
+                      : 'flex w-full items-center justify-between rounded-xl border border-line bg-surface px-3 py-2.5'}
                   >
-                    <span className="text-xs font-medium text-slate-800">{guest.name}</span>
-                    <span className="text-xs text-slate-500">{selected ? 'Added' : 'Add'}</span>
+                    <span className="text-xs font-medium text-ink">{guest.name}</span>
+                    <span className="text-xs text-muted">{selected ? 'Added' : 'Add'}</span>
                   </button>
                 );
               })}
@@ -570,13 +570,13 @@ export default function HistoryPage() {
                   onChange={(event) => setQuickGuestName(event.target.value)}
                   maxLength={80}
                   placeholder="Add a guest"
-                  className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 outline-none focus:border-slate-400"
+                  className="min-w-0 flex-1 rounded-xl border border-line bg-canvas px-3 py-2.5 text-xs text-ink outline-none focus:border-line-strong"
                 />
                 <button
                   type="button"
                   onClick={addQuickGuest}
                   disabled={!quickGuestName.trim() || addingGuest}
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-[#315e52] disabled:opacity-50"
+                  className="rounded-xl border border-line px-3 py-2.5 text-xs font-semibold text-primary disabled:opacity-50"
                 >
                   {addingGuest ? 'Adding…' : 'Add'}
                 </button>
@@ -590,7 +590,7 @@ export default function HistoryPage() {
                     type="button"
                     onClick={() => setConfirmDeleteTrip(false)}
                     disabled={deletingTrip}
-                    className="px-2.5 py-2 text-xs font-semibold text-slate-500"
+                    className="px-2.5 py-2 text-xs font-semibold text-muted"
                   >
                     Keep
                   </button>
@@ -598,7 +598,7 @@ export default function HistoryPage() {
                     type="button"
                     onClick={deleteTrip}
                     disabled={deletingTrip}
-                    className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 disabled:opacity-50"
+                    className="rounded-xl border border-danger-line bg-danger px-3 py-2 text-xs font-semibold text-danger disabled:opacity-50"
                   >
                     {deletingTrip ? 'Deleting…' : 'Delete now'}
                   </button>
@@ -607,7 +607,7 @@ export default function HistoryPage() {
                 <button
                   type="button"
                   onClick={() => setConfirmDeleteTrip(true)}
-                  className="px-2.5 py-2 text-xs font-semibold text-red-600 hover:text-red-700"
+                  className="px-2.5 py-2 text-xs font-semibold text-danger hover:text-danger"
                 >
                   Delete trip
                 </button>
@@ -617,14 +617,14 @@ export default function HistoryPage() {
                 type="button"
                 onClick={closeEdit}
                 disabled={savingEdit}
-                className="px-3 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                className="px-3 py-2.5 text-xs font-semibold text-muted hover:text-ink"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={savingEdit}
-                className="rounded-xl bg-[#315e52] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#244a40] disabled:opacity-50"
+                className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary hover:bg-primary-hover disabled:opacity-50"
               >
                 {savingEdit ? 'Saving…' : 'Save changes'}
               </button>

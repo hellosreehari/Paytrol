@@ -8,7 +8,7 @@
 //   the last cached copy is shown instead and refreshed in the background.
 // - API calls and sign-in routes are never cached here.
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const PAGE_CACHE = `paytrol-pages-${VERSION}`;
 const ASSET_CACHE = `paytrol-assets-${VERSION}`;
 const PAGE_TIMEOUT_MS = 3000;

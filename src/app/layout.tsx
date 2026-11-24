@@ -22,7 +22,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#f7f8fa',
+  themeColor: '#f4f6f1',
 };
 
 export default function RootLayout({
@@ -32,10 +32,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="light">
-      <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-      </head>
-      <body className={`${inter.className} bg-[#f7f8fa] text-slate-900 antialiased selection:bg-indigo-200 selection:text-slate-900`}>
+      <body className={`${inter.className} bg-canvas text-ink antialiased selection:bg-primary-soft selection:text-ink`}>
         <Providers>
           <InstallPrompt />
           {children}
