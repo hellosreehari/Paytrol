@@ -85,18 +85,12 @@ export async function POST(req: NextRequest) {
         failure = { error: 'Forbidden', status: 403 };
         return null;
       }
-      // Positive netAmount means uid1 owes uid2. Only the person who is owed
-      // can mark the debt as settled, so nobody can clear their own debt.
+      // Positive netAmount means uid1 owes uid2. Either side can record the
+      // payment: usually the person who paid marks it as paid, and the person
+      // who was owed can mark it as received if they forget. Every settlement
+      // is kept with who recorded it.
       const amountOwedToMe = roundMoney(balance.uid1 === uid ? -balance.netAmount : balance.netAmount);
       const otherUid = balance.uid1 === uid ? balance.uid2 : balance.uid1;
-      const otherIsGuest = Boolean(balance.guestUid) && balance.guestUid === otherUid;
-      if (amountOwedToMe < 0 && !otherIsGuest) {
-        failure = {
-          error: 'Only the person who is owed can mark this balance as settled.',
-          status: 403,
-        };
-        return null;
-      }
       settledAmount = Math.abs(amountOwedToMe);
       debtorUid = amountOwedToMe >= 0 ? otherUid : uid;
       otherUidForRecord = otherUid;

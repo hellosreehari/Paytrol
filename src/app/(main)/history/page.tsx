@@ -7,7 +7,7 @@ import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 import { invalidate, prefetchData, RESOURCES, useCachedData } from '@/lib/data-cache';
 import { cleanTripName, collectTripTags, tripHasTag } from '@/lib/trip-labels';
 import TripLabelsFields from '@/components/TripLabelsFields';
-import { CheckIcon, PencilIcon, TrashIcon } from '@/components/icons';
+import { CheckIcon, CloseIcon, PencilIcon, TrashIcon, TripsIcon, UsersIcon } from '@/components/icons';
 import PersonToggle from '@/components/PersonToggle';
 import QuickAddGuest from '@/components/QuickAddGuest';
 import { guestSubtitle } from '@/lib/people';
@@ -29,6 +29,7 @@ export default function HistoryPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [photoOpen, setPhotoOpen] = useState<string | null>(null);
   const [deletingTrip, setDeletingTrip] = useState(false);
   const [confirmDeleteTrip, setConfirmDeleteTrip] = useState(false);
   const friendsResource = useCachedData<{ friends: Friendship[] }>(RESOURCES.friends);
@@ -290,7 +291,7 @@ export default function HistoryPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-44 bg-surface rounded-3xl animate-pulse" />
+            <div key={i} className="h-28 bg-surface rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : trips.length === 0 ? (
@@ -301,106 +302,116 @@ export default function HistoryPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {visibleTrips.map((trip) => (
-            <div
-              key={trip.id}
-              className="rounded-3xl border border-line bg-surface overflow-hidden shadow-sm"
-            >
-              {trip.photoURL && (
-                <div className="relative aspect-[21/9] bg-black">
-                  <img
-                    src={trip.photoURL}
-                    alt="Dashboard proof"
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-surface/90 backdrop-blur-md text-[11px] text-ink-soft">
-                    {formatRelativeTime(trip.createdAt)}
+        <div className="space-y-3">
+          {visibleTrips.map((trip) => {
+            const riders = trip.participants ?? [];
+            const mine = trip.creatorUid === currentUserId;
+            const myShare = riders.find((p) => p.uid === currentUserId)?.shareAmount;
+            const shares = new Set(riders.map((p) => (p.shareAmount ?? 0).toFixed(2)));
+            const firstNames = riders.map((p) => (p.uid === currentUserId ? 'You' : p.displayName.split(' ')[0]));
+            return (
+              <article key={trip.id} className="rounded-2xl border border-line bg-surface p-3.5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  {trip.photoURL ? (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoOpen(trip.photoURL)}
+                      aria-label="See the dashboard photo"
+                      className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-black"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={trip.photoURL} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                    </button>
+                  ) : (
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                      <TripsIcon size={22} />
+                    </span>
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="truncate text-sm font-bold text-ink">
+                        {trip.name || `${trip.distanceKm} km`}
+                      </h3>
+                      <span className="shrink-0 text-base font-black text-ink tabular-nums">
+                        {formatCurrency(trip.totalCost)}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2 text-xs text-muted">
+                      <span className="truncate">
+                        {formatRelativeTime(trip.createdAt)}
+                        {trip.name ? ` · ${trip.distanceKm} km` : ` · ${trip.avgMileageKmpl} km/L`}
+                      </span>
+                      {myShare !== undefined && riders.length > 1 && (
+                        <span className="shrink-0">
+                          {mine ? 'You paid' : `Your share ${formatCurrency(myShare)}`}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
 
-              <div className="p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0">
-                    <h3 className="text-base font-bold text-ink break-words">
-                      {trip.name || `${trip.distanceKm} km Trip`}
-                    </h3>
-                    <p className="text-xs text-muted">
-                      {trip.name ? `${trip.distanceKm} km · ` : ''}Logged by {trip.creatorName}
-                    </p>
-                    {trip.tags && trip.tags.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {trip.tags.map((tag) => (
-                          <button
-                            type="button"
-                            key={tag}
-                            onClick={() => setTagFilter(tag)}
-                            className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary"
-                          >
-                            #{tag}
-                          </button>
-                        ))}
-                      </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <p className="min-w-0 flex-1 truncate text-xs text-ink-soft">
+                    <UsersIcon size={14} className="mr-1 -mt-0.5 text-muted" />
+                    {firstNames.join(', ')}
+                    {riders.length > 1 && shares.size === 1 && (
+                      <span className="text-muted"> · {formatCurrency(riders[0].shareAmount ?? 0)} each</span>
                     )}
-                  </div>
-                  <div className="flex items-start gap-2 text-right">
-                    <div>
-                      <span className="text-lg font-black text-ink">{formatCurrency(trip.totalCost)}</span>
-                      <span className="text-[11px] text-muted block">{trip.fuelUsedLiters.toFixed(2)} L fuel</span>
-                    </div>
-                    {trip.creatorUid === currentUserId && (
+                  </p>
+                  {mine && (
                     <button
                       type="button"
                       onClick={() => openEdit(trip)}
-                      className={cn(BTN.secondary, 'h-11 w-11 text-muted hover:text-ink')}
+                      className="-my-2 inline-flex h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted hover:text-ink"
                       aria-label={`Edit trip ${trip.name || `for ${trip.distanceKm} km`}`}
-                      title="Edit trip"
                     >
-                      <PencilIcon size={18} />
+                      <PencilIcon size={14} />
+                      Edit
                     </button>
-                    )}
-                  </div>
+                  )}
                 </div>
+                {!mine && (
+                  <p className="mt-1 text-[11px] text-muted">Logged by {trip.creatorName}</p>
+                )}
 
-                <div className="grid grid-cols-3 gap-2 bg-surface-soft p-2.5 rounded-xl border border-line text-center text-xs">
-                  <div>
-                    <span className="text-[11px] text-muted block">Mileage</span>
-                    <span className="font-semibold text-ink">{trip.avgMileageKmpl} km/L</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-muted block">Fuel Rate</span>
-                    <span className="font-semibold text-ink">₹{trip.fuelPricePerLiter}/L</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-muted block">Split Mode</span>
-                    <span className="font-semibold text-ink capitalize">{trip.splitMode}</span>
-                  </div>
-                </div>
-
-                {trip.participants && trip.participants.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
-                      Riders ({trip.participants.length})
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {trip.participants.map((p, idx) => (
-                        <div
-                          key={idx}
-                          className="inline-flex items-center gap-1.5 bg-surface-soft border border-line px-2 py-1 rounded-lg text-xs"
-                        >
-                          <span className="text-ink font-medium">{p.displayName}</span>
-                          <span className="text-primary font-bold">{formatCurrency(p.shareAmount)}</span>
-                        </div>
-                      ))}
-                    </div>
+                {trip.tags && trip.tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {trip.tags.map((tag) => (
+                      <button
+                        type="button"
+                        key={tag}
+                        onClick={() => setTagFilter(tag)}
+                        className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary"
+                      >
+                        #{tag}
+                      </button>
+                    ))}
                   </div>
                 )}
-              </div>
-            </div>
-          ))}
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {photoOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Dashboard photo"
+          onClick={() => setPhotoOpen(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photoOpen} alt="Dashboard photo" className="max-h-full max-w-full rounded-xl object-contain" />
+          <button
+            type="button"
+            aria-label="Close photo"
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white"
+          >
+            <CloseIcon size={20} />
+          </button>
         </div>
       )}
 

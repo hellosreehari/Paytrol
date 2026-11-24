@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { CameraIcon, ListIcon, ProfileIcon, ScanIcon, UsersIcon, WalletIcon } from '@/components/icons';
+import { CameraIcon, ProfileIcon, ScanIcon, TripsIcon, UsersIcon, WalletIcon } from '@/components/icons';
 import { requestCameraStart, requestCapture, useCameraState } from '@/lib/scan-events';
 
 type NavItem = { href: string; label: string; icon: (props: { className?: string; size?: number; strokeWidth?: number }) => React.JSX.Element };
@@ -12,7 +12,7 @@ type NavItem = { href: string; label: string; icon: (props: { className?: string
 // Off Home the centre button is Scan: it opens Home and turns the camera on.
 // On Home, with the camera running, it is the shutter (Capture).
 const LEFT: NavItem[] = [
-  { href: '/history', label: 'Trips', icon: ListIcon },
+  { href: '/history', label: 'Trips', icon: TripsIcon },
   { href: '/friends', label: 'Friends', icon: UsersIcon },
 ];
 const RIGHT: NavItem[] = [
