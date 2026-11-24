@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { ListIcon, ProfileIcon, ScanIcon, UsersIcon, WalletIcon } from '@/components/icons';
-import { requestScan } from '@/lib/scan-events';
+import { CameraIcon, ListIcon, ProfileIcon, ScanIcon, UsersIcon, WalletIcon } from '@/components/icons';
+import { requestCameraStart, requestCapture, useCameraState } from '@/lib/scan-events';
 
 type NavItem = { href: string; label: string; icon: (props: { className?: string; size?: number; strokeWidth?: number }) => React.JSX.Element };
 
-// Two tabs either side of the central Scan button, so the bar is symmetric.
-// Scan opens Home, where the camera lives, and starts a scan.
+// Two tabs either side of the centre button, so the bar is symmetric.
+// Off Home the centre button is Scan: it opens Home and turns the camera on.
+// On Home, with the camera running, it is the shutter (Capture).
 const LEFT: NavItem[] = [
   { href: '/history', label: 'Trips', icon: ListIcon },
   { href: '/friends', label: 'Friends', icon: UsersIcon },
@@ -24,6 +25,9 @@ export default function BottomNav() {
   const router = useRouter();
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const onHome = isActive('/home');
+  const camera = useCameraState();
+  const shutter = onHome && (camera === 'live' || camera === 'reading');
+  const reading = onHome && camera === 'reading';
 
   const tab = (item: NavItem) => {
     const active = isActive(item.href);
@@ -57,24 +61,39 @@ export default function BottomNav() {
 
         <Link
           href="/home"
-          aria-label="Scan dashboard"
+          aria-label={shutter ? 'Capture the trip meter' : 'Scan dashboard'}
           aria-current={onHome ? 'page' : undefined}
+          aria-disabled={reading || undefined}
           onClick={(event) => {
             event.preventDefault();
-            requestScan();
-            if (!onHome) router.push('/home');
+            if (reading) return;
+            if (!onHome) {
+              requestCameraStart();
+              router.push('/home');
+            } else if (camera === 'live') {
+              requestCapture();
+            } else {
+              requestCameraStart();
+            }
           }}
           className="flex flex-col items-center gap-1 pb-1.5 text-[11px] font-semibold text-primary focus:outline-none"
         >
           <span
             className={cn(
               '-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary',
-              'shadow-lg shadow-primary/25 ring-4 ring-surface transition-transform active:scale-95 hover:bg-primary-hover'
+              'shadow-lg shadow-primary/25 ring-4 ring-surface transition-transform active:scale-95 hover:bg-primary-hover',
+              reading && 'opacity-70'
             )}
           >
-            <ScanIcon size={26} strokeWidth={1.9} />
+            {reading ? (
+              <span aria-hidden="true" className="h-6 w-6 animate-spin rounded-full border-[2.5px] border-on-primary/35 border-t-on-primary" />
+            ) : shutter ? (
+              <CameraIcon size={26} strokeWidth={1.9} />
+            ) : (
+              <ScanIcon size={26} strokeWidth={1.9} />
+            )}
           </span>
-          <span>Scan</span>
+          <span>{reading ? 'Reading' : shutter ? 'Capture' : 'Scan'}</span>
         </Link>
 
         {RIGHT.map(tab)}

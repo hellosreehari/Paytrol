@@ -59,7 +59,7 @@ export async function readDashboard(photo: Blob, signal?: AbortSignal): Promise<
   const data = await res.json().catch(() => null);
   if (!res.ok || !data?.success) {
     const message = data?.error || `Scanning failed (error ${res.status}). Try again, or type the trip in.`;
-    // 429 = daily limit, 503 = scanning not set up or Gemini down: stop auto-scanning.
+    // 429 = daily limit, 503 = scanning not set up or Gemini down: stop retrying.
     throw new ScanError(message, !(res.status === 429 || res.status === 503 || res.status === 401));
   }
 
