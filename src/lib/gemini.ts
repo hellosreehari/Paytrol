@@ -245,7 +245,9 @@ export function setGeminiGenerateForTests(fn: GenerateFn | null): void {
 }
 
 function defaultGenerate(): GenerateFn {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+  // v1beta, not the SDK's default v1: the newest Flash models, the -latest
+  // aliases, response schemas and thinking settings are only served there.
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY!, apiVersion: 'v1beta' });
   return async (model, config, parts) => {
     const response = await ai.models.generateContent({
       model,
