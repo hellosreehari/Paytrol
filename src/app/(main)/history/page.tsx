@@ -7,7 +7,10 @@ import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 import { invalidate, prefetchData, RESOURCES, useCachedData } from '@/lib/data-cache';
 import { cleanTripName, collectTripTags, tripHasTag } from '@/lib/trip-labels';
 import TripLabelsFields from '@/components/TripLabelsFields';
-import { CheckIcon, TrashIcon, UserPlusIcon, VerifiedIcon } from '@/components/icons';
+import { CheckIcon, PencilIcon, TrashIcon } from '@/components/icons';
+import PersonToggle from '@/components/PersonToggle';
+import QuickAddGuest from '@/components/QuickAddGuest';
+import { guestSubtitle } from '@/lib/people';
 import { BTN, BTN_SIZE } from '@/lib/ui';
 import { cn } from '@/lib/utils';
 
@@ -313,7 +316,7 @@ export default function HistoryPage() {
                     decoding="async"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-surface/90 backdrop-blur-md text-[10px] text-ink-soft">
+                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-surface/90 backdrop-blur-md text-[11px] text-ink-soft">
                     {formatRelativeTime(trip.createdAt)}
                   </div>
                 </div>
@@ -346,30 +349,17 @@ export default function HistoryPage() {
                   <div className="flex items-start gap-2 text-right">
                     <div>
                       <span className="text-lg font-black text-ink">{formatCurrency(trip.totalCost)}</span>
-                      <span className="text-[10px] text-muted block">{trip.fuelUsedLiters.toFixed(2)} L fuel</span>
+                      <span className="text-[11px] text-muted block">{trip.fuelUsedLiters.toFixed(2)} L fuel</span>
                     </div>
-{trip.creatorUid === currentUserId && (
+                    {trip.creatorUid === currentUserId && (
                     <button
                       type="button"
                       onClick={() => openEdit(trip)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-muted transition-colors hover:border-line-strong hover:text-ink"
+                      className={cn(BTN.secondary, 'h-11 w-11 text-muted hover:text-ink')}
                       aria-label={`Edit trip ${trip.name || `for ${trip.distanceKm} km`}`}
                       title="Edit trip"
                     >
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16.862 3.487a2.1 2.1 0 013.651 1.434c0 .557-.221 1.091-.614 1.485L8.7 17.605l-4.2.9.9-4.2L16.862 3.487zM15.75 4.5l3.75 3.75"
-                        />
-                      </svg>
+                      <PencilIcon size={18} />
                     </button>
                     )}
                   </div>
@@ -377,22 +367,22 @@ export default function HistoryPage() {
 
                 <div className="grid grid-cols-3 gap-2 bg-surface-soft p-2.5 rounded-xl border border-line text-center text-xs">
                   <div>
-                    <span className="text-[10px] text-muted block">Mileage</span>
+                    <span className="text-[11px] text-muted block">Mileage</span>
                     <span className="font-semibold text-ink">{trip.avgMileageKmpl} km/L</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-muted block">Fuel Rate</span>
+                    <span className="text-[11px] text-muted block">Fuel Rate</span>
                     <span className="font-semibold text-ink">₹{trip.fuelPricePerLiter}/L</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-muted block">Split Mode</span>
+                    <span className="text-[11px] text-muted block">Split Mode</span>
                     <span className="font-semibold text-ink capitalize">{trip.splitMode}</span>
                   </div>
                 </div>
 
                 {trip.participants && trip.participants.length > 0 && (
                   <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
                       Riders ({trip.participants.length})
                     </span>
                     <div className="flex flex-wrap gap-1.5">
@@ -513,9 +503,7 @@ export default function HistoryPage() {
 
               <PersonToggle
                 name="You"
-                subtitle="Include me in this split"
                 photo={user?.image}
-                verified
                 selected={includeCreatorDraft}
                 onToggle={() => setIncludeCreatorDraft((current) => !current)}
               />
@@ -553,13 +541,7 @@ export default function HistoryPage() {
                   <PersonToggle
                     key={guest.id}
                     name={guest.name}
-                    subtitle={
-                      guest.linkedUid
-                        ? 'Linked account'
-                        : guest.email
-                          ? `Guest · links when ${guest.email} signs in`
-                          : 'Guest · no account'
-                    }
+                    subtitle={guestSubtitle(guest)}
                     verified={Boolean(guest.linkedUid)}
                     selected={selectedParticipantIds.includes(key)}
                     onToggle={() => toggleParticipant(key)}
@@ -567,33 +549,53 @@ export default function HistoryPage() {
                 );
               })}
 
-              <div className="flex gap-2">
-                <input
-                  value={quickGuestName}
-                  onChange={(event) => setQuickGuestName(event.target.value)}
-                  maxLength={80}
-                  placeholder="New guest name"
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      addQuickGuest();
-                    }
-                  }}
-                  className="min-w-0 flex-1 rounded-xl border border-line bg-canvas px-3 py-2.5 text-xs text-ink outline-none focus:border-line-strong"
-                />
-                <button
-                  type="button"
-                  onClick={addQuickGuest}
-                  disabled={!quickGuestName.trim() || addingGuest}
-                  className={cn(BTN.soft, BTN_SIZE.sm)}
-                >
-                  <UserPlusIcon size={15} />
-                  {addingGuest ? 'Adding…' : 'Add guest'}
-                </button>
-              </div>
+              <QuickAddGuest
+                value={quickGuestName}
+                onChange={setQuickGuestName}
+                onAdd={addQuickGuest}
+                adding={addingGuest}
+              />
             </div>
 
-            <div className="mt-5 space-y-3 border-t border-line pt-4">
+            <div className="mt-5 border-t border-line pt-4">
+              {confirmDeleteTrip ? (
+                <div className="space-y-2.5 rounded-2xl border border-danger-line bg-danger-soft p-3">
+                  <p className="text-xs font-medium text-ink">
+                    Delete this trip? Everyone&apos;s balance is adjusted to remove it.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteTrip(false)}
+                      disabled={deletingTrip}
+                      className={cn(BTN.secondary, BTN_SIZE.md, 'w-full')}
+                    >
+                      Keep trip
+                    </button>
+                    <button
+                      type="button"
+                      onClick={deleteTrip}
+                      disabled={deletingTrip}
+                      className={cn(BTN.danger, BTN_SIZE.md, 'w-full')}
+                    >
+                      {deletingTrip ? 'Deleting…' : 'Delete trip'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteTrip(true)}
+                  disabled={savingEdit}
+                  className="inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-danger hover:underline disabled:opacity-50"
+                >
+                  <TrashIcon size={16} />
+                  Delete trip
+                </button>
+              )}
+            </div>
+
+            <div className="sticky bottom-0 -mx-5 -mb-5 mt-5 border-t border-line bg-surface px-5 py-3">
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -605,111 +607,17 @@ export default function HistoryPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={savingEdit || deletingTrip}
+                  disabled={savingEdit || deletingTrip || confirmDeleteTrip}
                   className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
                 >
                   <CheckIcon size={16} />
-                  {savingEdit ? 'Saving…' : 'Save changes'}
+                  {savingEdit ? 'Saving…' : 'Save'}
                 </button>
               </div>
-
-              {confirmDeleteTrip ? (
-                <div className="rounded-2xl border border-danger-line bg-danger-soft p-3 space-y-2.5">
-                  <p className="text-xs font-medium text-danger">
-                    Delete this trip? Everyone&apos;s balance is adjusted to remove it.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDeleteTrip(false)}
-                      disabled={deletingTrip}
-                      className={cn(BTN.secondary, BTN_SIZE.sm, 'w-full')}
-                    >
-                      Keep trip
-                    </button>
-                    <button
-                      type="button"
-                      onClick={deleteTrip}
-                      disabled={deletingTrip}
-                      className={cn(BTN.danger, BTN_SIZE.sm, 'w-full')}
-                    >
-                      <TrashIcon size={15} />
-                      {deletingTrip ? 'Deleting…' : 'Delete trip'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteTrip(true)}
-                  disabled={savingEdit}
-                  className={cn(BTN.dangerOutline, BTN_SIZE.sm, 'w-full')}
-                >
-                  <TrashIcon size={15} />
-                  Delete trip
-                </button>
-              )}
             </div>
           </form>
         </div>
       )}
     </div>
-  );
-}
-
-function PersonToggle({
-  name,
-  subtitle,
-  photo,
-  verified,
-  selected,
-  onToggle,
-}: {
-  name: string;
-  subtitle?: string | null;
-  photo?: string | null;
-  verified?: boolean;
-  selected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={selected}
-      className={cn(
-        'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
-        selected ? 'border-primary-line bg-primary-soft' : 'border-line bg-surface hover:bg-surface-soft'
-      )}
-    >
-      <span
-        className={cn(
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
-          selected ? 'border-primary bg-primary text-on-primary' : 'border-line-strong bg-surface'
-        )}
-      >
-        {selected && <CheckIcon size={14} strokeWidth={2.4} />}
-      </span>
-      {photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={photo} alt="" className="h-8 w-8 shrink-0 rounded-full" />
-      ) : (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-soft text-xs font-bold text-muted">
-          {name[0]?.toUpperCase() || '?'}
-        </span>
-      )}
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1 text-xs font-semibold text-ink">
-          <span className="truncate">{name}</span>
-          {verified && (
-            <span title="Signed in to Paytrol" className="shrink-0 text-primary">
-              <VerifiedIcon size={14} />
-              <span className="sr-only">Verified account</span>
-            </span>
-          )}
-        </span>
-        {subtitle && <span className="block truncate text-[11px] text-muted">{subtitle}</span>}
-      </span>
-    </button>
   );
 }
