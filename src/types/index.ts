@@ -39,6 +39,8 @@ export interface Friendship {
 // A single trip record
 export interface Trip {
   id: string;
+  name?: string;           // optional label, e.g. "Goa weekend"
+  tags?: string[];         // optional tags, e.g. ["office", "commute"]
   creatorUid: string;
   creatorName: string;
   photoURL: string;

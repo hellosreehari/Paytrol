@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { Trip } from '@/types';
+import { RESOURCES, useCachedData } from '@/lib/data-cache';
 import { CheckCircleIcon } from '@/components/icons';
 
 interface NormalizedBalance {
@@ -18,28 +19,18 @@ interface NormalizedBalance {
 
 export default function BalancesPage() {
   const { user } = useAuth();
-  const [balances, setBalances] = useState<NormalizedBalance[]>([]);
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const balancesResource = useCachedData<NormalizedBalance[]>(RESOURCES.balances);
+  const tripsResource = useCachedData<Trip[]>(RESOURCES.trips);
+  const balances = Array.isArray(balancesResource.data) ? balancesResource.data : [];
+  const trips = Array.isArray(tripsResource.data) ? tripsResource.data : [];
+  const loading = balancesResource.loading;
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const [expandedFriendUid, setExpandedFriendUid] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fetchBalancesList = async (): Promise<boolean> => {
     try {
-      const [balancesRes, tripsRes] = await Promise.all([
-        fetch('/api/balances'),
-        fetch('/api/trips'),
-      ]);
-      const [balancesData, tripsData] = await Promise.all([
-        balancesRes.json(),
-        tripsRes.json(),
-      ]);
-      if (!balancesRes.ok || !balancesData.success || !Array.isArray(balancesData.data)) {
-        throw new Error(balancesData.error || 'Could not load balances.');
-      }
-      setBalances(balancesData.data);
-      setTrips(tripsData.success && Array.isArray(tripsData.data) ? tripsData.data : []);
+      await Promise.all([balancesResource.refresh(), tripsResource.refresh()]);
       return true;
     } catch (error: unknown) {
       console.error('Failed to load balances:', error);
@@ -48,14 +39,8 @@ export default function BalancesPage() {
         message: error instanceof Error ? error.message : 'Could not load balances.',
       });
       return false;
-    } finally {
-      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchBalancesList();
-  }, []);
 
   const handleSettle = async (balanceId: string) => {
     setSettlingId(balanceId);
@@ -262,7 +247,7 @@ export default function BalancesPage() {
                           >
                             <div>
                               <p className="text-xs font-semibold text-ink">
-                                {trip.distanceKm} km trip
+                                {trip.name || `${trip.distanceKm} km trip`}
                               </p>
                               <p className="text-[10px] text-muted">
                                 {friendOwesYou ? 'Friend share' : 'Your share'} ·{' '}

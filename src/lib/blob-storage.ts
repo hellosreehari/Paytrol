@@ -2,7 +2,10 @@ import { BlobSASPermissions, BlobServiceClient, ContainerClient } from '@azure/s
 
 const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const containerName = process.env.AZURE_STORAGE_CONTAINER || 'dashboard-photos';
-const READ_URL_TTL_MS = 60 * 60 * 1000; // signed photo links stay valid for 1 hour
+const READ_URL_TTL_MS = 60 * 60 * 1000; // signed photo links stay valid for at least 1 hour
+// Photos never change once uploaded, so browsers may keep them for as long as
+// the signed link is valid.
+const PHOTO_CACHE_CONTROL = 'private, max-age=86400, immutable';
 
 let containerPromise: Promise<ContainerClient> | null = null;
 
@@ -69,7 +72,7 @@ export async function uploadPhoto(
   const blockBlobClient = container.getBlockBlobClient(blobName);
 
   await blockBlobClient.upload(buffer, buffer.length, {
-    blobHTTPHeaders: { blobContentType: contentType },
+    blobHTTPHeaders: { blobContentType: contentType, blobCacheControl: PHOTO_CACHE_CONTROL },
   });
 
   return blockBlobClient.url;
@@ -108,9 +111,15 @@ export async function getPhotoReadUrl(photoURL: string): Promise<string> {
   if (!blobName) return photoURL;
   try {
     const container = await getContainerClient();
+    // Round the expiry up to the next whole hour. Every request within the
+    // same hour then gets the exact same URL, so the browser can reuse the
+    // photo it already downloaded instead of fetching it again on every
+    // visit (a fresh expiry per request made every URL unique).
+    const expiresAt = Math.ceil((Date.now() + READ_URL_TTL_MS) / READ_URL_TTL_MS) * READ_URL_TTL_MS;
     return await container.getBlockBlobClient(blobName).generateSasUrl({
       permissions: BlobSASPermissions.parse('r'),
-      expiresOn: new Date(Date.now() + READ_URL_TTL_MS),
+      expiresOn: new Date(expiresAt),
+      cacheControl: PHOTO_CACHE_CONTROL,
     });
   } catch (err) {
     console.warn('Could not sign photo URL:', err);
@@ -134,4 +143,10 @@ export async function deletePhoto(blobUrl: string): Promise<void> {
   } catch (err) {
     console.warn('Failed to delete blob:', err);
   }
+}
+
+/** Open the photo container ahead of the first request (see instrumentation.ts). */
+export async function warmUpBlobStorage(): Promise<void> {
+  if (!hasBlobConfig()) return;
+  await getContainerClient();
 }

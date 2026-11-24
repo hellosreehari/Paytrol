@@ -48,22 +48,27 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Auto-link any invites that were sent to this user's email before they signed up
-    if (email) {
-      const unlinkedInvites = await queryDocuments<Friendship>(
-        'friendships',
-        { toEmail: email, $or: [{ toUid: null }, { toUid: '' }] }
-      );
-      for (const inv of unlinkedInvites) {
+    // The auto-link lookup and the relationship query don't depend on each
+    // other (the relationship query already matches invites by email), so
+    // run them together instead of one after another.
+    const [unlinkedInvites, relationships] = await Promise.all([
+      // Invites sent to this user's email before they signed up
+      email
+        ? queryDocuments<Friendship>('friendships', { toEmail: email, $or: [{ toUid: null }, { toUid: '' }] })
+        : Promise.resolve([] as Friendship[]),
+      getRelationships(uid, email),
+    ]);
+
+    // Link those invites to this account
+    await Promise.all(
+      unlinkedInvites.map((inv) => {
         inv.toUid = uid;
         inv.toName = session?.user?.name || inv.toName;
         inv.toPhoto = session?.user?.image || inv.toPhoto;
         inv.updatedAt = new Date().toISOString();
-        await updateDocument('friendships', inv);
-      }
-    }
-
-    const relationships = await getRelationships(uid, email);
+        return updateDocument('friendships', inv);
+      })
+    );
 
     // One entry per person: mutual or repeated invites must not show twice.
     const friends: Friendship[] = [];

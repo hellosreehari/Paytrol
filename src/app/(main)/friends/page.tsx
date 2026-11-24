@@ -1,19 +1,36 @@
 'use client';
 
-import { useState, useEffect, useId } from 'react';
+import { useState, useId } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { Friendship, GuestContact } from '@/types';
 import { AlertCircleIcon, CheckCircleIcon } from '@/components/icons';
+import { invalidate, RESOURCES, useCachedData } from '@/lib/data-cache';
+
+interface FriendLists {
+  friends: Friendship[];
+  pendingSent: Friendship[];
+  pendingReceived: Friendship[];
+}
 
 export default function FriendsPage() {
   const { user } = useAuth();
   const emailInputId = useId();
-  const [friends, setFriends] = useState<Friendship[]>([]);
-  const [pendingSent, setPendingSent] = useState<Friendship[]>([]);
-  const [pendingReceived, setPendingReceived] = useState<Friendship[]>([]);
-  const [guestContacts, setGuestContacts] = useState<GuestContact[]>([]);
-  const [loading, setLoading] = useState(true);
+  const friendsResource = useCachedData<FriendLists>(RESOURCES.friends);
+  const guestsResource = useCachedData<GuestContact[]>(RESOURCES.guests);
+  const friends = friendsResource.data?.friends ?? [];
+  const pendingSent = friendsResource.data?.pendingSent ?? [];
+  const pendingReceived = friendsResource.data?.pendingReceived ?? [];
+  const guestContacts = guestsResource.data ?? [];
+  const loading = friendsResource.loading;
+  const setFriends = (update: (current: Friendship[]) => Friendship[]) =>
+    friendsResource.mutate((current) => ({
+      friends: update(current?.friends ?? []),
+      pendingSent: current?.pendingSent ?? [],
+      pendingReceived: current?.pendingReceived ?? [],
+    }));
+  const setGuestContacts = (update: (current: GuestContact[]) => GuestContact[]) =>
+    guestsResource.mutate((current) => update(current ?? []));
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
@@ -27,32 +44,9 @@ export default function FriendsPage() {
   const [deletingGuestId, setDeletingGuestId] = useState<string | null>(null);
   const [bannerNotice, setBannerNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const fetchFriendsList = async () => {
-    try {
-      const [friendsRes, guestsRes] = await Promise.all([
-        fetch('/api/friends'),
-        fetch('/api/guests'),
-      ]);
-      const [data, guestsData] = await Promise.all([
-        friendsRes.json(),
-        guestsRes.json(),
-      ]);
-      if (data.success && data.data) {
-        setFriends(data.data.friends || []);
-        setPendingSent(data.data.pendingSent || []);
-        setPendingReceived(data.data.pendingReceived || []);
-      }
-      if (guestsData.success && guestsData.data) setGuestContacts(guestsData.data);
-    } catch (err) {
-      console.error('Failed to load friends:', err);
-    } finally {
-      setLoading(false);
-    }
+  const fetchFriendsList = () => {
+    invalidate([RESOURCES.friends, RESOURCES.guests]);
   };
-
-  useEffect(() => {
-    fetchFriendsList();
-  }, []);
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +117,7 @@ export default function FriendsPage() {
         throw new Error(data.error || 'Could not remove friend.');
       }
       setFriends((current) => current.filter((friend) => friend.id !== friendshipId));
+      invalidate([RESOURCES.friends, RESOURCES.balances]);
       setConfirmUnfriendId(null);
       setBannerNotice({ type: 'success', text: 'Friend removed.' });
     } catch (error: unknown) {
@@ -149,6 +144,7 @@ export default function FriendsPage() {
         throw new Error(data.error || 'Could not delete guest.');
       }
       setGuestContacts((current) => current.filter((guest) => guest.id !== guestId));
+      invalidate([RESOURCES.trips, RESOURCES.balances]);
       setConfirmDeleteGuestId(null);
       setBannerNotice({ type: 'success', text: 'Guest deleted and removed from trip splits.' });
     } catch (error: unknown) {
@@ -181,6 +177,7 @@ export default function FriendsPage() {
 
       const updated = data.data as GuestContact;
       setGuestContacts((current) => current.map((item) => item.id === updated.id ? updated : item));
+      if (updated.linkedUid) invalidate([RESOURCES.trips, RESOURCES.balances, RESOURCES.friends]);
       setEditingGuestId(null);
       setBannerNotice({
         type: 'success',

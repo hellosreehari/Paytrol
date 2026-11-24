@@ -2,9 +2,9 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 import type { Trip } from '@/types';
+import { RESOURCES, useCachedData } from '@/lib/data-cache';
 import { FuelPumpIcon } from '@/components/icons';
 
 interface HomeBalance {
@@ -13,30 +13,10 @@ interface HomeBalance {
 
 export default function HomePage() {
   const { user, profile } = useAuth();
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [balances, setBalances] = useState<HomeBalance[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [tripsRes, balancesRes] = await Promise.all([
-          fetch('/api/trips'),
-          fetch('/api/balances'),
-        ]);
-        const tripsData = await tripsRes.json();
-        const balancesData = await balancesRes.json();
-
-        if (tripsData.success) setTrips(tripsData.data || []);
-        if (balancesData.success) setBalances(balancesData.data || []);
-      } catch (err) {
-        console.error('Home load error:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, []);
+  const { data: tripsData, loading } = useCachedData<Trip[]>(RESOURCES.trips);
+  const { data: balancesData } = useCachedData<HomeBalance[]>(RESOURCES.balances);
+  const trips = tripsData ?? [];
+  const balances = balancesData ?? [];
 
   const totalOwedToYou = balances
     .filter((b) => b.amount > 0)
@@ -163,15 +143,16 @@ export default function HomePage() {
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {trip.photoURL ? (
-                    <img src={trip.photoURL} alt="Trip proof" className="w-12 h-12 rounded-xl object-cover shrink-0 border border-line" />
+                    <img src={trip.photoURL} alt="Trip proof" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover shrink-0 border border-line" />
                   ) : (
                     <div className="w-12 h-12 rounded-xl bg-surface-soft flex items-center justify-center text-primary shrink-0"><FuelPumpIcon size={22} /></div>
                   )}
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-ink truncate">
-                      {trip.distanceKm} km • {trip.avgMileageKmpl} km/L
+                      {trip.name || `${trip.distanceKm} km • ${trip.avgMileageKmpl} km/L`}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-xs text-muted truncate">
+                      {trip.name ? `${trip.distanceKm} km • ` : ''}
                       {formatRelativeTime(trip.createdAt)} • {trip.fuelUsedLiters.toFixed(2)}L
                     </p>
                   </div>
