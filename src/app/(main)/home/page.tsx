@@ -3,13 +3,12 @@
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
-import { cn, formatCurrency, formatRelativeTime } from '@/lib/utils';
-import { BTN, BTN_SIZE } from '@/lib/ui';
+import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 import HomeScanner from '@/components/HomeScanner';
 import TripSheet, { type TripDraft } from '@/components/TripSheet';
 import type { Trip } from '@/types';
 import { RESOURCES, useCachedData } from '@/lib/data-cache';
-import { FuelPumpIcon, PencilIcon } from '@/components/icons';
+import { ChevronRightIcon, FuelPumpIcon, PencilIcon } from '@/components/icons';
 
 export default function HomePage() {
   const { user, profile } = useAuth();
@@ -55,10 +54,16 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => setDraft({ reading: null, previewUrl: null })}
-          className={cn(BTN.secondary, BTN_SIZE.md, 'w-full text-primary')}
+          className="flex w-full items-center gap-3 rounded-2xl border border-line bg-surface p-3 text-left transition-colors hover:bg-surface-soft active:scale-[0.99]"
         >
-          <PencilIcon size={16} />
-          Type it in instead
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <PencilIcon size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-ink">Type it in</span>
+            <span className="block text-xs text-muted">Enter the distance and average yourself</span>
+          </span>
+          <ChevronRightIcon size={18} className="shrink-0 text-muted" />
         </button>
       </section>
 
@@ -90,7 +95,7 @@ export default function HomePage() {
                 onClick={() => setDraft({ reading: null, previewUrl: null })}
                 className="text-xs font-semibold text-primary hover:text-primary-hover"
               >
-                Or type one in →
+                Or type one in
               </button>
             </div>
           </div>

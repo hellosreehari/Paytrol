@@ -13,6 +13,7 @@ import {
 } from '@/lib/frame-quality';
 import { ScanError, foundAnything, foundBoth, readDashboard, type ScanReading } from '@/lib/scan-client';
 import { CameraIcon, FlashIcon, ImageIcon } from '@/components/icons';
+import { onScanRequest, takeScanRequest } from '@/lib/scan-events';
 
 /** How long one scan looks for the trip meter before pausing. Time spent reading doesn't count. */
 const SCAN_WINDOW_MS = 10_000;
@@ -383,7 +384,7 @@ export default function HomeScanner({
       }
       // Only the first Home of this app open scans by itself. Coming back
       // from another tab (or after saving a trip) waits for a tap.
-      const skip = autoScannedThisLaunch;
+      // The Scan button in the bottom bar always starts a scan.
       let granted = readFlag();
       if (!granted && navigator.permissions?.query) {
         try {
@@ -393,8 +394,12 @@ export default function HomeScanner({
           // Safari doesn't know the "camera" permission name.
         }
       }
-      if (cancelled) return;
-      if (granted && skip) setPhase('paused');
+      // React's dev double-run (or a scan already started) must not undo a start.
+      if (cancelled || phaseRef.current !== 'checking') return;
+      const asked = takeScanRequest();
+      const skip = autoScannedThisLaunch && !asked;
+      if (asked) startScanRef.current();
+      else if (granted && skip) setPhase('paused');
       else if (granted) {
         autoScannedThisLaunch = true;
         startScanRef.current();
@@ -438,6 +443,17 @@ export default function HomeScanner({
   useEffect(() => {
     if (hold && (phaseRef.current === 'scanning' || phaseRef.current === 'starting')) pause();
   }, [hold, pause]);
+
+  /** The Scan button was tapped while Home is open. */
+  useEffect(
+    () =>
+      onScanRequest(() => {
+        const busy = ['starting', 'scanning', 'reading'].includes(phaseRef.current);
+        if (!busy && !holdRef.current) startScanRef.current();
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }),
+    []
+  );
 
   /** Start again when asked, e.g. the review sheet was dismissed to retake. */
   useEffect(() => {

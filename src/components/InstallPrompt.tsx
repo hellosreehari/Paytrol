@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { CloseIcon, PhoneIcon } from '@/components/icons';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -72,9 +73,7 @@ export default function InstallPrompt() {
     >
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary-soft border border-primary-line flex items-center justify-center shrink-0">
-          <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18v-5.25m0 0a6.002 6.002 0 00-4-5.659V5a2 2 0 114 0v2.091a6.002 6.002 0 004 5.659M12 12.75h.008v.008H12v-.008z" />
-          </svg>
+          <PhoneIcon size={24} className="text-primary" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-ink">Add Paytrol to Home Screen</p>
@@ -89,9 +88,7 @@ export default function InstallPrompt() {
           className="text-muted hover:text-ink p-1 rounded-lg"
           aria-label="Dismiss"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <CloseIcon size={16} />
         </button>
       </div>
 
