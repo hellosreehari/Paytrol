@@ -38,6 +38,8 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
   const meUid = user?.uid || '';
   const titleId = useId();
   const distanceRef = useRef<HTMLInputElement>(null);
+  const mileageRef = useRef<HTMLInputElement>(null);
+  const priceRef = useRef<HTMLInputElement>(null);
 
   const { reading } = draft;
   const scanned = Boolean(reading);
@@ -307,7 +309,13 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
     unit: string,
     value: string,
     onChange: (value: string) => void,
-    options: { low?: boolean; ref?: React.Ref<HTMLInputElement>; onEdit?: () => void } = {}
+    options: {
+      low?: boolean;
+      ref?: React.Ref<HTMLInputElement>;
+      onEdit?: () => void;
+      /** The field the keyboard's Next key moves to. Without one, the key reads Done. */
+      next?: React.RefObject<HTMLInputElement | null>;
+    } = {}
   ) => (
     <label
       className={cn(
@@ -323,9 +331,16 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
           ref={options.ref}
           type="number"
           inputMode="decimal"
+          enterKeyHint={options.next ? 'next' : 'done'}
           step="0.1"
           min="0"
           value={value}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            if (options.next?.current) options.next.current.focus();
+            else event.currentTarget.blur();
+          }}
           onChange={(event) => {
             options.onEdit?.();
             onChange(event.target.value);
@@ -407,13 +422,16 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
             {field('Distance', 'km', distance, setDistance, {
               low: lowDistance,
               ref: distanceRef,
+              next: mileageRef,
               onEdit: () => setTouched((t) => ({ ...t, distance: true })),
             })}
             {field('Average', 'km/L', mileage, setMileage, {
               low: lowMileage,
+              ref: mileageRef,
+              next: priceRef,
               onEdit: () => setTouched((t) => ({ ...t, mileage: true })),
             })}
-            {field('Fuel', '₹/L', price, setPrice)}
+            {field('Fuel', '₹/L', price, setPrice, { ref: priceRef })}
           </div>
 
           <div className="flex items-baseline justify-between px-0.5 text-xs text-muted">

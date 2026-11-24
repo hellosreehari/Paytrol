@@ -4,7 +4,12 @@ import { useState, useId } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { BTN, BTN_SIZE } from '@/lib/ui';
-import { CheckIcon, FUEL_TYPE_ICONS } from '@/components/icons';
+import Link from 'next/link';
+import { ChevronRightIcon, CheckIcon, FUEL_TYPE_ICONS, UsersIcon } from '@/components/icons';
+import { formatCurrency } from '@/lib/utils';
+import { RESOURCES, useCachedData } from '@/lib/data-cache';
+import { tripStats } from '@/lib/trip-stats';
+import type { Friendship, GuestContact, Trip } from '@/types';
 
 const fuelTypes = [
   { value: 'petrol', label: 'Petrol', icon: FUEL_TYPE_ICONS.petrol },
@@ -15,6 +20,12 @@ const fuelTypes = [
 export default function ProfilePage() {
   const { user, profile, updateProfile, signOut } = useAuth();
   const fuelPriceId = useId();
+  const tripsData = useCachedData<Trip[]>(RESOURCES.trips).data;
+  const friendsData = useCachedData<{ friends: Friendship[] }>(RESOURCES.friends).data;
+  const guestsData = useCachedData<GuestContact[]>(RESOURCES.guests).data;
+  const stats = tripStats(tripsData ?? [], user?.uid || '');
+  const friendCount = friendsData?.friends?.length ?? 0;
+  const guestCount = guestsData?.length ?? 0;
 
   const [fuelType, setFuelType] = useState<'petrol' | 'diesel' | 'cng'>(
     profile?.defaultFuelType || 'petrol'
@@ -58,7 +69,7 @@ export default function ProfilePage() {
       <header>
         <h1 className="text-2xl font-black text-ink">Profile</h1>
         <p className="text-xs text-muted mt-1">
-          Your fuel defaults and account.
+          Your trips, people and fuel defaults.
         </p>
       </header>
 
@@ -82,6 +93,48 @@ export default function ProfilePage() {
           </span>
         </div>
       </div>
+
+      <section className="rounded-3xl border border-line bg-surface p-5" aria-labelledby="stats-title">
+        <div className="flex items-baseline justify-between">
+          <h2 id="stats-title" className="text-xs font-bold uppercase tracking-wider text-primary">
+            Your trips
+          </h2>
+          {stats.thisMonthTrips > 0 && (
+            <span className="text-xs text-muted">
+              This month: {stats.thisMonthTrips} {stats.thisMonthTrips === 1 ? 'trip' : 'trips'} · {formatCurrency(stats.thisMonthCost)}
+            </span>
+          )}
+        </div>
+        <dl className="mt-3 grid grid-cols-2 gap-2">
+          {[
+            { label: 'Trips', value: String(stats.trips) },
+            { label: 'Distance', value: `${stats.distanceKm.toLocaleString('en-IN')} km` },
+            { label: 'Your fuel cost', value: formatCurrency(stats.yourCost) },
+            { label: 'Average', value: stats.avgKmpl ? `${stats.avgKmpl} km/L` : '–' },
+          ].map((item) => (
+            <div key={item.label} className="rounded-2xl bg-surface-soft px-3.5 py-3">
+              <dt className="text-[11px] font-medium text-muted">{item.label}</dt>
+              <dd className="mt-0.5 text-lg font-black text-ink tabular-nums">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <Link
+        href="/friends"
+        className="flex items-center gap-3 rounded-3xl border border-line bg-surface p-4 hover:bg-surface-soft"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          <UsersIcon size={18} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-ink">People</span>
+          <span className="block text-xs text-muted">
+            {friendCount} {friendCount === 1 ? 'friend' : 'friends'} · {guestCount} {guestCount === 1 ? 'guest' : 'guests'}
+          </span>
+        </span>
+        <ChevronRightIcon size={18} className="text-muted" />
+      </Link>
 
       {savedSuccess && (
         <div className="p-3.5 rounded-2xl bg-primary-soft border border-primary-line text-primary text-xs flex items-center gap-2">

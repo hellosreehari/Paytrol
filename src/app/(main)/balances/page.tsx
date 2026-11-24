@@ -46,7 +46,7 @@ export default function BalancesPage() {
   };
 
   /** Returns true when the balance was settled. */
-  const handleSettle = async (balanceId: string): Promise<boolean> => {
+  const handleSettle = async (balanceId: string, doneMessage = 'Marked as paid.'): Promise<boolean> => {
     setSettlingId(balanceId);
     setFeedback(null);
     setSettleError(null);
@@ -61,7 +61,7 @@ export default function BalancesPage() {
         throw new Error(data.error || 'Could not update this balance.');
       }
       if (await fetchBalancesList()) {
-        setFeedback({ type: 'success', message: 'Balance marked as settled.' });
+        setFeedback({ type: 'success', message: doneMessage });
       }
       return true;
     } catch (error: unknown) {
@@ -173,7 +173,7 @@ export default function BalancesPage() {
             <CheckCircleIcon size={36} strokeWidth={1.6} className="mx-auto text-primary" />
             <p className="text-sm font-semibold text-ink">All balances are settled!</p>
             <p className="text-xs text-muted max-w-xs mx-auto">
-              When you or your friends split trips, the net balances will automatically update here.
+              New trips you split show up here.
             </p>
           </div>
         ) : (
@@ -217,15 +217,19 @@ export default function BalancesPage() {
                   {(() => {
                     const expanded = expandedFriendUid === bal.friendUid;
                     const tripCount = getTripBreakdown(bal.friendUid).length;
-                    const canSettle = isOwed || bal.isGuest;
+                    // The person who pays marks it as paid. A guest has no account,
+                    // so you mark theirs too. A friend who owes you marks it themselves.
+                    const waitingOnFriend = isOwed && !bal.isGuest;
                     const settling = settlingId === bal.odataId;
                     if (confirmSettleId === bal.odataId) {
                       return (
                         <div className="rounded-2xl border border-primary-line bg-primary-soft p-3 space-y-2.5">
                           <p className="text-xs font-medium text-ink">
-                            {isOwed
+                            {waitingOnFriend
                               ? `Mark ${formatCurrency(absAmount)} from ${bal.friendName} as received?`
-                              : `Mark your ${formatCurrency(absAmount)} to ${bal.friendName} as paid?`}
+                              : isOwed
+                                ? `Mark ${bal.friendName}’s ${formatCurrency(absAmount)} as paid?`
+                                : `Mark your ${formatCurrency(absAmount)} to ${bal.friendName} as paid?`}
                           </p>
                           {settleError && (
                             <p role="alert" className="text-xs text-danger">
@@ -247,13 +251,13 @@ export default function BalancesPage() {
                             <button
                               type="button"
                               onClick={async () => {
-                                if (await handleSettle(bal.odataId)) setConfirmSettleId(null);
+                                if (await handleSettle(bal.odataId, waitingOnFriend ? 'Marked as received.' : 'Marked as paid.')) setConfirmSettleId(null);
                               }}
                               disabled={settling}
                               className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
                             >
                               <CheckIcon size={16} />
-                              {settling ? 'Saving…' : isOwed ? 'Yes, received' : 'Yes, paid'}
+                              {settling ? 'Saving…' : waitingOnFriend ? 'Yes, received' : 'Yes, paid'}
                             </button>
                           </div>
                         </div>
@@ -274,7 +278,7 @@ export default function BalancesPage() {
                               className={cn('transition-transform', expanded && 'rotate-180')}
                             />
                           </button>
-                          {canSettle && (
+                          {!waitingOnFriend && (
                             <button
                               type="button"
                               onClick={() => {
@@ -284,13 +288,23 @@ export default function BalancesPage() {
                               className={cn(BTN.soft, BTN_SIZE.md)}
                             >
                               <CheckIcon size={16} />
-                              {isOwed ? 'Mark as received' : 'Mark as paid'}
+                              Mark as paid
                             </button>
                           )}
                         </div>
-                        {!canSettle && (
-                          <p className="text-center text-[11px] text-muted">
-                            Once you’ve paid, {bal.friendName} marks it as received.
+                        {waitingOnFriend && (
+                          <p className="text-[11px] text-muted">
+                            {bal.friendName} marks it as paid once they’ve paid you.{' '}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setConfirmSettleId(bal.odataId);
+                                setSettleError(null);
+                              }}
+                              className="font-semibold text-primary underline underline-offset-2"
+                            >
+                              Already got it?
+                            </button>
                           </p>
                         )}
                       </div>
@@ -316,7 +330,12 @@ export default function BalancesPage() {
                                 {formatCurrency(trip.totalCost)} total
                               </p>
                             </div>
-                            <p className="text-xs font-bold text-ink">
+                            <p
+                              className={cn(
+                                'shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold tabular-nums',
+                                friendOwesYou ? 'bg-primary-soft text-primary' : 'bg-danger-soft text-danger'
+                              )}
+                            >
                               {friendOwesYou ? '+' : '−'}{formatCurrency(amount)}
                             </p>
                           </div>

@@ -14,10 +14,11 @@ import {
   House,
   Image as LucideImage,
   Link as LucideLink,
-  List,
+  Gauge,
   Maximize2,
   Minimize2,
   Pencil,
+  Route,
   ScanLine,
   Search,
   Share2,
@@ -69,7 +70,8 @@ export const FlashIcon = make(Zap, 'FlashIcon');
 export const SearchIcon = make(Search, 'SearchIcon');
 export const HomeIcon = make(House, 'HomeIcon');
 export const ScanIcon = make(ScanLine, 'ScanIcon');
-export const ListIcon = make(List, 'ListIcon');
+export const TripsIcon = make(Route, 'TripsIcon');
+export const GaugeIcon = make(Gauge, 'GaugeIcon');
 export const UsersIcon = make(Users, 'UsersIcon');
 export const WalletIcon = make(Wallet, 'WalletIcon');
 export const ProfileIcon = make(CircleUser, 'ProfileIcon');
