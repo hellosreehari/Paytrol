@@ -162,3 +162,33 @@ describe('extractDashboardReadings model fallback', () => {
     expect(isModelUnavailable(Object.assign(new Error('API key not valid'), { status: 400 }))).toBe(false);
   });
 });
+
+describe('Google-side failures', () => {
+  const reading = JSON.stringify({ trip_distance_found: true, trip_distance_value: 5, trip_distance_unit: 'km', average_economy_found: true, average_economy_value: 10, average_economy_unit: 'km/l', confidence_distance: 'high', confidence_mileage: 'high', raw_text: '' });
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = 'test-key';
+    delete process.env.GEMINI_MODEL;
+    resetGeminiModelCache();
+  });
+  afterEach(() => setGeminiGenerateForTests(null));
+
+  it('retries without thinking, then moves to the next model on a 5xx', async () => {
+    const calls: string[] = [];
+    setGeminiGenerateForTests(async (model, config) => {
+      calls.push(`${model}:${config.thinkingConfig ? 'think' : 'plain'}`);
+      if (model === DEFAULT_GEMINI_MODELS[0]) throw Object.assign(new Error('Internal error'), { status: 500 });
+      return reading;
+    });
+    const result = await extractDashboardReadings('aGk=');
+    expect(result.distance_km).toBe(5);
+    expect(calls.slice(0, 3)).toEqual([`${DEFAULT_GEMINI_MODELS[0]}:think`, `${DEFAULT_GEMINI_MODELS[0]}:plain`, `${DEFAULT_GEMINI_MODELS[0]}:plain`]);
+    expect(calls[3]).toBe(`${DEFAULT_GEMINI_MODELS[1]}:think`);
+  });
+
+  it('names the model and status when every model fails on Google\'s side', async () => {
+    setGeminiGenerateForTests(async () => {
+      throw Object.assign(new Error('The model is overloaded'), { status: 503 });
+    });
+    await expect(extractDashboardReadings('aGk=')).rejects.toThrow(/temporarily unavailable.*error 503/);
+  });
+});

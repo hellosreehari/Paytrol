@@ -219,8 +219,10 @@ export function isModelUnavailable(err: unknown): boolean {
 }
 
 function configFor(model: string, withThinking: boolean): GenerateContentConfig {
+  const gemini3 = /^gemini-[3-9]/.test(model) || model.includes('latest');
   const config: GenerateContentConfig = {
-    temperature: 0,
+    // Google advises leaving Gemini 3 models at their default temperature.
+    ...(gemini3 ? {} : { temperature: 0 }),
     responseMimeType: 'application/json',
     responseSchema,
     abortSignal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -254,6 +256,44 @@ function defaultGenerate(): GenerateFn {
   };
 }
 
+/** A failure on Google's side (5xx, overloaded, timed out) that another try or another model may get past. */
+export function isServerSideFailure(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  const message = err instanceof Error ? err.message : String(err);
+  if (status !== undefined && status >= 500) return true;
+  return (err as { name?: string })?.name === 'AbortError' || /overloaded|unavailable|internal error|deadline|timed? ?out/i.test(message);
+}
+
+/** Add which model failed and its status, so the message on screen is enough to diagnose it. */
+function withModelNote(error: ExtractionError, model: string, cause: unknown): ExtractionError {
+  const status = (cause as { status?: number })?.status;
+  return new ExtractionError(`${error.message} (Gemini ${model}${status ? `, error ${status}` : ''})`, error.httpStatus, { cause });
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * One model, up to three tries: as configured; without the thinking setting
+ * if the model rejects it or fails on Google's side; and once more after a
+ * short wait if Google is still failing.
+ */
+async function generateWithRetry(generate: GenerateFn, model: string, parts: unknown[]): Promise<string> {
+  try {
+    return await generate(model, configFor(model, true), parts);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    const rejectedThinking = (err as { status?: number })?.status === 400 && /thinking/i.test(message);
+    if (!rejectedThinking && !isServerSideFailure(err)) throw err;
+  }
+  try {
+    return await generate(model, configFor(model, false), parts);
+  } catch (err: unknown) {
+    if (!isServerSideFailure(err)) throw err;
+  }
+  await sleep(generateOverride ? 0 : 800);
+  return generate(model, configFor(model, false), parts);
+}
+
 /**
  * Extract trip distance and average fuel economy from a car dashboard photo
  * using Gemini vision with a JSON response schema. Tries each configured
@@ -275,31 +315,29 @@ export async function extractDashboardReadings(
 
   let text: string | null = null;
   let lastError: unknown = null;
+  let lastModel = models[0];
   for (const model of models) {
+    lastModel = model;
     try {
-      try {
-        text = await generate(model, configFor(model, true), parts);
-      } catch (err: unknown) {
-        // A model that rejects the thinking setting still deserves a plain try.
-        const message = err instanceof Error ? err.message : String(err);
-        if ((err as { status?: number })?.status !== 400 || !/thinking/i.test(message)) throw err;
-        text = await generate(model, configFor(model, false), parts);
-      }
+      text = await generateWithRetry(generate, model, parts);
       workingModel = model;
       break;
     } catch (err: unknown) {
       lastError = err;
-      if (!isModelUnavailable(err)) {
+      if (!isModelUnavailable(err) && !isServerSideFailure(err)) {
         console.error(`Gemini vision extraction failed (model ${model}):`, err);
-        throw describeGeminiError(err);
+        throw withModelNote(describeGeminiError(err), model, err);
       }
-      console.warn(`Gemini model ${model} is unavailable, trying the next one:`, err instanceof Error ? err.message : err);
+      console.warn(`Gemini model ${model} failed, trying the next one:`, err instanceof Error ? err.message : err);
       if (workingModel === model) workingModel = null;
     }
   }
 
   if (text === null) {
     console.error(`No Gemini model answered (tried ${models.join(', ')}):`, lastError);
+    if (isServerSideFailure(lastError)) {
+      throw withModelNote(describeGeminiError(lastError), lastModel, lastError);
+    }
     throw new ExtractionError(
       `Scanning is not set up correctly (none of the Gemini models ${models.join(', ')} are available to this API key). Please enter the trip manually.`,
       503,
@@ -315,4 +353,36 @@ export async function extractDashboardReadings(
     console.error('Gemini returned unreadable output:', text, err);
     throw new ExtractionError('Could not read the dashboard. Please try a clearer photo, or enter the trip manually.', 502, { cause: err });
   }
+}
+
+export interface GeminiProbe {
+  model: string;
+  ok: boolean;
+  status?: number;
+  detail: string;
+  ms: number;
+}
+
+/**
+ * Send a tiny request to each model, set up exactly like a real scan, and
+ * report what Google answers. Used by /api/health?gemini=1 to diagnose
+ * scanning without guessing. Never includes the API key.
+ */
+export async function probeGeminiModels(): Promise<GeminiProbe[]> {
+  if (!hasGeminiConfig()) return [];
+  const generate = generateOverride ?? defaultGenerate();
+  // Text only, with the real scan settings (schema, thinking), so it costs almost nothing.
+  const parts = [{ text: 'No photo is attached. Report both figures as not found.' }];
+  const results: GeminiProbe[] = [];
+  for (const model of getGeminiModelNames()) {
+    const started = Date.now();
+    try {
+      await generate(model, configFor(model, true), parts);
+      results.push({ model, ok: true, detail: 'Answered', ms: Date.now() - started });
+    } catch (err: unknown) {
+      const message = (err instanceof Error ? err.message : String(err)).replace(/key=[^&\s"]+/gi, 'key=…').slice(0, 400);
+      results.push({ model, ok: false, status: (err as { status?: number })?.status, detail: message, ms: Date.now() - started });
+    }
+  }
+  return results;
 }

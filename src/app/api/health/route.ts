@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { describeDatabaseConfigProblem, getStorageMode, pingDatabase } from '@/lib/db';
 import { hasBlobConfig, pingBlobStorage } from '@/lib/blob-storage';
-import { getGeminiModelNames, hasGeminiConfig } from '@/lib/gemini';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getGeminiModelNames, hasGeminiConfig, probeGeminiModels } from '@/lib/gemini';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +23,20 @@ async function check(run: () => Promise<void>, okDetail: string): Promise<Check>
  * Reports which backing services this instance is actually using, without
  * exposing any secrets. The deploy workflow calls it after every deploy.
  */
-export async function GET() {
+export async function GET(req: Request) {
+  // /api/health?gemini=1 sends a tiny test request to each Gemini model and
+  // shows Google's answer. Signed-in users only, since each call uses quota.
+  if (new URL(req.url).searchParams.get('gemini') === '1') {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Sign in to Paytrol first, then open this page again.' }, { status: 401 });
+    }
+    return NextResponse.json(
+      { configuredModel: process.env.GEMINI_MODEL || null, models: await probeGeminiModels() },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+
   const storageMode = getStorageMode();
 
   const database: Check =
