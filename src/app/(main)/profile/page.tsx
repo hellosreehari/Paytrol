@@ -3,6 +3,7 @@
 import { useState, useId } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { BTN, BTN_SIZE } from '@/lib/ui';
 import { CheckIcon, FUEL_TYPE_ICONS } from '@/components/icons';
 
 const fuelTypes = [
@@ -48,16 +49,16 @@ export default function ProfilePage() {
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
     } else {
-      setSaveError('Could not save your preferences. Please try again.');
+      setSaveError('Couldn’t save. Please try again.');
     }
   };
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-black text-ink">Profile &amp; Settings</h1>
+        <h1 className="text-2xl font-black text-ink">Profile</h1>
         <p className="text-xs text-muted mt-1">
-          Manage your defaults, vehicle fuel preferences, and account.
+          Your fuel defaults and account.
         </p>
       </header>
 
@@ -77,7 +78,7 @@ export default function ProfilePage() {
           <p className="text-base font-bold text-ink truncate">{user?.name || 'Driver'}</p>
           <p className="text-xs text-muted truncate">{user?.email || 'driver@paytrol.app'}</p>
           <span className="inline-block mt-1 text-[10px] font-semibold text-primary bg-primary-soft px-2 py-0.5 rounded-full border border-primary-line">
-            Google Connected
+            Signed in with Google
           </span>
         </div>
       </div>
@@ -85,7 +86,7 @@ export default function ProfilePage() {
       {savedSuccess && (
         <div className="p-3.5 rounded-2xl bg-primary-soft border border-primary-line text-primary text-xs flex items-center gap-2">
           <CheckIcon size={16} />
-          <span>Profile &amp; vehicle preferences saved successfully!</span>
+          <span>Saved.</span>
         </div>
       )}
       {saveError && (
@@ -96,12 +97,12 @@ export default function ProfilePage() {
 
       <form onSubmit={handleSave} className="space-y-5 rounded-3xl bg-surface border border-line p-5">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary">
-          Vehicle &amp; Fuel Defaults
+          Fuel defaults
         </h2>
 
         <div>
-          <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2">
-            Fuel Type
+          <label className="block text-xs font-semibold text-ink-soft mb-2">
+            Fuel type
           </label>
           <div className="grid grid-cols-3 gap-2">
             {fuelTypes.map((ft) => (
@@ -126,9 +127,9 @@ export default function ProfilePage() {
         <div>
           <label
             htmlFor={fuelPriceId}
-            className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2 cursor-pointer"
+            className="block text-xs font-semibold text-ink-soft mb-2 cursor-pointer"
           >
-            Last-Paid Fuel Price (₹/L)
+            Fuel price you last paid
           </label>
           <div className="bg-surface-soft border border-line rounded-2xl p-3.5 flex items-center gap-2">
             <span className="text-lg font-bold text-muted">₹</span>
@@ -147,7 +148,7 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2">
+          <label className="block text-xs font-semibold text-ink-soft mb-2">
             Currency
           </label>
           <div className="bg-surface-soft border border-line rounded-2xl p-3 flex justify-between text-xs text-ink-soft">
@@ -159,17 +160,18 @@ export default function ProfilePage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-3 bg-primary hover:bg-primary-hover text-on-primary font-bold rounded-2xl text-xs transition-colors"
+          className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
         >
-          {saving ? 'Updating...' : 'Save Preferences'}
+          {saving ? 'Saving…' : 'Save'}
         </button>
       </form>
 
       <button
+        type="button"
         onClick={signOut}
-        className="w-full py-3.5 rounded-2xl bg-danger-soft hover:bg-danger-soft border border-danger-line text-danger text-xs font-bold transition-colors"
+        className={cn(BTN.dangerOutline, BTN_SIZE.md, 'w-full')}
       >
-        Sign Out of Paytrol
+        Sign out
       </button>
     </div>
   );

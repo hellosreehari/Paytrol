@@ -244,9 +244,9 @@ export default function HistoryPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-black text-ink">Trip History</h1>
+        <h1 className="text-2xl font-black text-ink">Trips</h1>
         <p className="text-xs text-muted mt-1">
-          Every trip logged with attached dashboard photo, math breakdown, and participant shares.
+          Every trip you’ve logged, with who rode and what they owe.
         </p>
       </header>
 

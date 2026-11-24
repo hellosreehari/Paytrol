@@ -481,7 +481,7 @@ export default function HomeScanner({
               aria-live="polite"
               className="mx-2 min-w-0 rounded-2xl bg-black/55 px-3 py-1.5 text-center text-xs font-semibold leading-snug"
             >
-              {message || 'Fit the meter in the box, tap Capture'}
+              {message || 'Fit the trip meter in the box'}
             </span>
           ) : (
             <span />
