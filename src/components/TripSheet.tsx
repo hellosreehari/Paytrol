@@ -284,6 +284,20 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
     }
   };
 
+  // What still blocks Save, shown above the button.
+  const missing = [
+    !(distanceKm > 0) && 'distance',
+    !(mileageKmpl > 0) && 'average',
+    !(pricePerLiter > 0) && 'fuel price',
+  ].filter(Boolean) as string[];
+  const blocker =
+    missing.length > 0
+      ? `Fill in the ${missing.join(missing.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1')} to save.`
+      : tickedInOrder.length === 0
+        ? 'Tick at least one person who rode.'
+        : null;
+  const canSave = !blocker && !saving;
+
   const lowDistance = scanned && reading?.confidenceDistance === 'low' && !touched.distance;
   const lowMileage = scanned && reading?.confidenceMileage === 'low' && !touched.mileage;
   const subtitle = draft.note || (scanned ? 'Check against the photo. Tap a number to fix it.' : 'Type in the trip meter readings.');
@@ -485,16 +499,18 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
         </div>
 
         <div className="shrink-0 space-y-2 border-t border-line px-5 pb-safe pt-3">
-          {errorMsg && (
+          {errorMsg ? (
             <p role="alert" className="rounded-xl border border-danger-line bg-danger-soft px-3 py-2 text-xs text-danger">
               {errorMsg}
             </p>
+          ) : (
+            blocker && <p className="text-center text-xs text-muted" aria-live="polite">{blocker}</p>
           )}
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover active:scale-[0.99] disabled:opacity-60"
+            disabled={!canSave}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover active:scale-[0.99] disabled:bg-surface-sunken disabled:text-muted"
           >
             {saving ? (
               <>
