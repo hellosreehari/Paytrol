@@ -1,12 +1,20 @@
 import { GoogleGenAI, ThinkingLevel, Type, type GenerateContentConfig, type Schema } from '@google/genai';
 
 /**
- * Models to try, in order. A model that is retired, or closed to new API keys
- * (gemini-2.5-flash now answers 404 for keys that never used it), is skipped
- * and the next one is tried. GEMINI_MODEL, if set, goes first and may hold a
- * comma-separated list.
+ * Models to try, in order. Flash-Lite comes first: reading two printed numbers
+ * is easy, it is the cheapest model, and on the free tier it gets far more
+ * requests a day than Flash (hundreds against a few dozen). The Flash models
+ * are the fallback. A model that is retired, closed to this key, or rate
+ * limited is skipped and the next one is tried. GEMINI_MODEL, if set, goes
+ * first and may hold a comma-separated list.
  */
-export const DEFAULT_GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-flash-latest'];
+export const DEFAULT_GEMINI_MODELS = [
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemini-3.8-flash',
+  'gemini-3.6-flash',
+  'gemini-flash-latest',
+];
 
 /** Give up on one model call after this long, so the user isn't left waiting. */
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -250,7 +258,8 @@ function configFor(model: string, withThinking: boolean): GenerateContentConfig 
   };
   // Reading two printed numbers needs little reasoning: low thinking keeps
   // Gemini 3 models fast. Older models don't accept thinkingLevel.
-  if (withThinking && /^gemini-[3-9]/.test(model)) {
+  // Flash-Lite thinks very little by default, so it is left as it is.
+  if (withThinking && /^gemini-[3-9]/.test(model) && !model.includes('lite')) {
     config.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
   }
   return config;

@@ -125,7 +125,8 @@ describe('extractDashboardReadings model fallback', () => {
     expect(calls).toEqual([DEFAULT_GEMINI_MODELS[0]]);
   });
 
-  it('asks Gemini 3 models for low thinking, and retries without it if refused', async () => {
+  it('asks Gemini 3 Flash for low thinking, and retries without it if refused', async () => {
+    process.env.GEMINI_MODEL = 'gemini-3.8-flash';
     const configs: unknown[] = [];
     setGeminiGenerateForTests(async (_model, config) => {
       configs.push(config.thinkingConfig);
@@ -195,7 +196,7 @@ describe('Google-side failures', () => {
   });
   afterEach(() => setGeminiGenerateForTests(null));
 
-  it('retries without thinking, then moves to the next model on a 5xx', async () => {
+  it('retries, then moves to the next model on a 5xx (Flash-Lite is never asked to think)', async () => {
     const calls: string[] = [];
     setGeminiGenerateForTests(async (model, config) => {
       calls.push(`${model}:${config.thinkingConfig ? 'think' : 'plain'}`);
@@ -204,8 +205,8 @@ describe('Google-side failures', () => {
     });
     const result = await extractDashboardReadings('aGk=');
     expect(result.distance_km).toBe(5);
-    expect(calls.slice(0, 3)).toEqual([`${DEFAULT_GEMINI_MODELS[0]}:think`, `${DEFAULT_GEMINI_MODELS[0]}:plain`, `${DEFAULT_GEMINI_MODELS[0]}:plain`]);
-    expect(calls[3]).toBe(`${DEFAULT_GEMINI_MODELS[1]}:think`);
+    expect(calls.slice(0, 3)).toEqual([`${DEFAULT_GEMINI_MODELS[0]}:plain`, `${DEFAULT_GEMINI_MODELS[0]}:plain`, `${DEFAULT_GEMINI_MODELS[0]}:plain`]);
+    expect(calls[3]).toBe(`${DEFAULT_GEMINI_MODELS[1]}:plain`);
   });
 
   it('names the model and status when every model fails on Google\'s side', async () => {
