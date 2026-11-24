@@ -67,7 +67,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Vehicle & Fuel Defaults**: Set default fuel type (**Petrol**, **Diesel**, **CNG**), currency (**INR ₹**), and last-paid fuel price per liter.
 
 ### 2. Capture, AI Extraction & Verification
-- **One-tap scan**: opens the phone's own picker to take a photo or choose one from the gallery, then shows a preview to confirm or retake.
+- **Scan from Home**: a live camera card on Home. The centre button of the bottom bar is the shutter (Capture); you can also choose a photo from the gallery. The numbers open in one review sheet with the riders.
 - **Gemini Vision Extraction**: Vision-capable AI specifically extracts trip distance (under *"Since start"*) and average fuel economy while ignoring total odometer (e.g. 66639 km) and range.
 - **Mandatory Verification Gate**:
   - Cropped photo preview at top with expand/collapse toggle.
