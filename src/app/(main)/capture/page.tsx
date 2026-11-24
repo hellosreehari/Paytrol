@@ -68,12 +68,27 @@ export default function CapturePage() {
       const formData = new FormData();
       formData.append('photo', uploadFile);
 
-      const res = await fetch('/api/extract', {
-        method: 'POST',
-        body: formData,
-      });
+      let res: Response;
+      try {
+        res = await fetch('/api/extract', {
+          method: 'POST',
+          body: formData,
+          signal: AbortSignal.timeout(75_000),
+        });
+      } catch (fetchError) {
+        const timedOut = fetchError instanceof DOMException && fetchError.name === 'TimeoutError';
+        throw new Error(
+          timedOut
+            ? 'Reading the photo took too long. Try again, or enter the trip manually.'
+            : 'Could not reach Paytrol. Check your connection and try again.'
+        );
+      }
 
-      const data = await res.json();
+      // A proxy or crash can answer with an HTML page instead of JSON.
+      const data = await res.json().catch(() => ({
+        success: false,
+        error: `Scanning failed (error ${res.status}). Try again, or enter the trip manually.`,
+      }));
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to extract readings from photo');
@@ -173,6 +188,18 @@ export default function CapturePage() {
           <div className="space-y-1">
             {!manualEntry && <p className="font-semibold text-danger">Couldn&apos;t read the photo</p>}
             <p>{errorMsg}</p>
+            {!manualEntry && (
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg(null);
+                  setManualEntry(true);
+                }}
+                className="mt-1 inline-flex h-9 items-center font-semibold text-danger underline underline-offset-2"
+              >
+                Enter the trip manually
+              </button>
+            )}
           </div>
         </div>
       )}

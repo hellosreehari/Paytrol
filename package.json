@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@azure/storage-blob": "^12.34.0",
-    "@google/generative-ai": "^0.24.1",
+    "@google/genai": "^3.6.1",
     "heic2any": "^0.0.4",
     "mongodb": "^5.9.2",
     "next": "16.4.6",
