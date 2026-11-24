@@ -253,7 +253,7 @@ export default function BalancesPage() {
                               className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
                             >
                               <CheckIcon size={16} />
-                              {settling ? 'Saving…' : 'Yes, settled'}
+                              {settling ? 'Saving…' : isOwed ? 'Yes, received' : 'Yes, paid'}
                             </button>
                           </div>
                         </div>
@@ -261,18 +261,14 @@ export default function BalancesPage() {
                     }
                     return (
                       <div className="space-y-2">
-                        <div className={cn('grid gap-2', canSettle ? 'grid-cols-2' : 'grid-cols-1')}>
+                        <div className="flex items-center justify-between gap-2">
                           <button
                             type="button"
                             onClick={() => setExpandedFriendUid(expanded ? null : bal.friendUid)}
                             aria-expanded={expanded}
-                            className={cn(BTN.secondary, BTN_SIZE.md, 'w-full')}
+                            className="-ml-1 inline-flex h-11 items-center gap-1 rounded-lg px-1 text-sm font-semibold text-ink-soft hover:text-ink"
                           >
-                            {expanded
-                              ? 'Hide trips'
-                              : tripCount === 1
-                                ? '1 trip'
-                                : `${tripCount} trips`}
+                            {expanded ? 'Hide trips' : tripCount === 1 ? 'See 1 trip' : `See ${tripCount} trips`}
                             <ChevronDownIcon
                               size={16}
                               className={cn('transition-transform', expanded && 'rotate-180')}
@@ -285,16 +281,16 @@ export default function BalancesPage() {
                                 setConfirmSettleId(bal.odataId);
                                 setSettleError(null);
                               }}
-                              className={cn(BTN.soft, BTN_SIZE.md, 'w-full')}
+                              className={cn(BTN.soft, BTN_SIZE.md)}
                             >
                               <CheckIcon size={16} />
-                              Mark settled
+                              {isOwed ? 'Mark as received' : 'Mark as paid'}
                             </button>
                           )}
                         </div>
                         {!canSettle && (
                           <p className="text-center text-[11px] text-muted">
-                            {bal.friendName} marks this settled once you&apos;ve paid.
+                            Once you’ve paid, {bal.friendName} marks it as received.
                           </p>
                         )}
                       </div>

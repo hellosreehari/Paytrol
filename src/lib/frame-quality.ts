@@ -12,13 +12,15 @@ export const SAMPLE_HEIGHT = 120;
 export const GUIDE_BOX = { left: 0.08, top: 0.14, right: 0.92, bottom: 0.78 };
 
 /** Mean change per pixel (0 to 1) below which the phone counts as still. */
-export const STILL_THRESHOLD = 0.03;
+export const STILL_THRESHOLD = 0.06;
 /** Edge strength below which a frame is never sharp enough, however dim the cabin. */
 export const MIN_SHARPNESS = 40;
 /** A frame must be at least this share of the sharpest frame seen in this scan. */
-export const RELATIVE_SHARPNESS = 0.6;
+export const RELATIVE_SHARPNESS = 0.5;
 /** How long the picture has to stay still, sharp and lit before a frame is taken. */
-export const STEADY_MS = 900;
+export const STEADY_MS = 700;
+/** A hand shakes now and then: this many moving frames in a row (100 ms apart) are forgiven. */
+export const MOVING_GRACE_FRAMES = 2;
 
 /** Convert RGBA pixels to luma (0 to 255). */
 export function toGray(rgba: Uint8ClampedArray, width: number, height: number): Float32Array {
@@ -29,12 +31,38 @@ export function toGray(rgba: Uint8ClampedArray, width: number, height: number): 
   return gray;
 }
 
-/** Mean absolute change per pixel between two frames, from 0 (same) to 1. */
-export function frameDifference(a: Float32Array, b: Float32Array): number {
-  if (a.length !== b.length || a.length === 0) return 1;
+/**
+ * How much the view changed between two frames, from 0 (same) to 1. It
+ * compares 8×8-pixel block averages, not single pixels, so the small shake of
+ * a hand-held phone barely counts while turning the phone away does.
+ */
+export function frameDifference(
+  a: Float32Array,
+  b: Float32Array,
+  width = SAMPLE_WIDTH,
+  height = SAMPLE_HEIGHT,
+  block = 8
+): number {
+  if (a.length !== b.length || a.length === 0 || a.length !== width * height) return 1;
+  const cols = Math.floor(width / block);
+  const rows = Math.floor(height / block);
+  if (cols === 0 || rows === 0) return 1;
   let total = 0;
-  for (let i = 0; i < a.length; i += 1) total += Math.abs(a[i] - b[i]);
-  return total / a.length / 255;
+  for (let by = 0; by < rows; by += 1) {
+    for (let bx = 0; bx < cols; bx += 1) {
+      let sumA = 0;
+      let sumB = 0;
+      for (let y = by * block; y < (by + 1) * block; y += 1) {
+        const row = y * width;
+        for (let x = bx * block; x < (bx + 1) * block; x += 1) {
+          sumA += a[row + x];
+          sumB += b[row + x];
+        }
+      }
+      total += Math.abs(sumA - sumB) / (block * block);
+    }
+  }
+  return total / (cols * rows) / 255;
 }
 
 /**
@@ -116,10 +144,12 @@ export class SteadyTracker {
   private steadySince: number | null = null;
   private bestInScan = 0;
   private bestInHold = 0;
+  private movingStreak = 0;
 
   reset(): void {
     this.steadySince = null;
     this.bestInHold = 0;
+    this.movingStreak = 0;
   }
 
   update(sample: FrameSample): SteadyState {
@@ -131,6 +161,13 @@ export class SteadyTracker {
     else if (sample.difference > STILL_THRESHOLD) problem = 'moving';
     else if (sample.sharpness < sharpFloor) problem = 'blurry';
 
+    // A brief wobble doesn't restart the hold: skip the frame and keep the progress.
+    if (problem === 'moving' && this.steadySince !== null && this.movingStreak < MOVING_GRACE_FRAMES) {
+      this.movingStreak += 1;
+      return { progress: Math.min(1, (sample.time - this.steadySince) / STEADY_MS), capture: false, problem: null };
+    }
+    if (problem !== 'moving') this.movingStreak = 0;
+
     if (problem) {
       this.reset();
       return { progress: 0, capture: false, problem };
@@ -141,7 +178,9 @@ export class SteadyTracker {
     const held = sample.time - this.steadySince;
     const progress = Math.min(1, held / STEADY_MS);
     // Once held long enough, take a frame that is close to the sharpest of the hold.
-    const capture = held >= STEADY_MS && sample.sharpness >= this.bestInHold * 0.9;
+    // If no frame matches the best for a while, take the current one anyway.
+    const capture =
+      held >= STEADY_MS && (sample.sharpness >= this.bestInHold * 0.85 || held >= STEADY_MS + 500);
     if (capture) this.reset();
     return { progress, capture, problem: null };
   }

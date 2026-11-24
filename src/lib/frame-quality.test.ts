@@ -51,12 +51,20 @@ describe('frame checks', () => {
     expect(crisp).toBeGreaterThan(soft * 5);
   });
 
-  it('sees no change between identical frames and a big change when the view moves', () => {
-    const a = stripes();
-    expect(frameDifference(a, a)).toBe(0);
-    const shifted = new Float32Array(a.length);
-    for (let i = 0; i < a.length; i += 1) shifted[i] = a[(i + 2) % a.length];
-    expect(frameDifference(a, shifted)).toBeGreaterThan(0.3);
+  it('ignores a small shake but sees the phone turning away', () => {
+    const W2 = 160;
+    const H2 = 120;
+    const scene = (offset: number) => {
+      const g = new Float32Array(W2 * H2);
+      for (let y = 0; y < H2; y += 1) {
+        for (let x = 0; x < W2; x += 1) g[y * W2 + x] = x + offset < 80 ? 20 : x % 4 < 2 ? 60 : 220;
+      }
+      return g;
+    };
+    const a = scene(0);
+    expect(frameDifference(a, a, W2, H2)).toBe(0);
+    expect(frameDifference(a, scene(1), W2, H2)).toBeLessThan(0.06);
+    expect(frameDifference(a, scene(40), W2, H2)).toBeGreaterThan(0.06);
   });
 
   it('accepts a dark dashboard with bright digits, and rejects darkness and glare', () => {
@@ -85,18 +93,25 @@ describe('SteadyTracker', () => {
     expect(tracker.update(sample(STEADY_MS)).capture).toBe(true);
   });
 
-  it('starts over when the phone moves', () => {
+  it('forgives a brief wobble but starts over when the phone keeps moving', () => {
     const tracker = new SteadyTracker();
     tracker.update(sample(0));
-    expect(tracker.update(sample(500, { difference: 0.2 })).problem).toBe('moving');
-    expect(tracker.update(sample(STEADY_MS)).capture).toBe(false);
-    expect(tracker.update(sample(STEADY_MS * 2)).capture).toBe(true);
+    expect(tracker.update(sample(100, { difference: 0.2 })).problem).toBe(null);
+    expect(tracker.update(sample(STEADY_MS)).capture).toBe(true);
+
+    const moving = new SteadyTracker();
+    moving.update(sample(0));
+    moving.update(sample(100, { difference: 0.2 }));
+    moving.update(sample(200, { difference: 0.2 }));
+    expect(moving.update(sample(300, { difference: 0.2 })).problem).toBe('moving');
+    expect(moving.update(sample(STEADY_MS)).capture).toBe(false);
   });
 
   it('judges blur against the sharpest frame seen so far', () => {
     const tracker = new SteadyTracker();
     tracker.update(sample(0, { sharpness: 1000 }));
     expect(tracker.update(sample(100, { sharpness: 300 })).problem).toBe('blurry');
+    expect(tracker.update(sample(200, { sharpness: 550 })).problem).toBe(null);
   });
 
   it('waits for a frame close to the sharpest of the hold', () => {
@@ -104,6 +119,10 @@ describe('SteadyTracker', () => {
     tracker.update(sample(0, { sharpness: 800 }));
     expect(tracker.update(sample(STEADY_MS, { sharpness: 600 })).capture).toBe(false);
     expect(tracker.update(sample(STEADY_MS + 100, { sharpness: 780 })).capture).toBe(true);
+    // ...but not forever.
+    const t2 = new SteadyTracker();
+    t2.update(sample(0, { sharpness: 800 }));
+    expect(t2.update(sample(STEADY_MS + 500, { sharpness: 600 })).capture).toBe(true);
   });
 
   it('flags poor light', () => {
