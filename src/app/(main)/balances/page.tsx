@@ -119,9 +119,9 @@ export default function BalancesPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-black text-ink">Balances &amp; Settlements</h1>
+        <h1 className="text-2xl font-black text-ink">Balances</h1>
         <p className="text-xs text-muted mt-1">
-          Net amounts across your trips. Record payments here when they’re settled.
+          Who owes what across your trips. Mark it here once it’s paid.
         </p>
       </header>
 
@@ -158,7 +158,7 @@ export default function BalancesPage() {
 
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-muted">
-          <span className="font-semibold uppercase tracking-wider">Net Friend Balances</span>
+          <span className="font-semibold uppercase tracking-wider">By person</span>
           <span>{activeBalances.length} active</span>
         </div>
 
