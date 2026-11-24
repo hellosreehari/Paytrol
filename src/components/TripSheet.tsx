@@ -440,7 +440,7 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
                   key={rider.key}
                   name={rider.name}
                   photo={rider.photo}
-                  verified={rider.kind !== 'me' && rider.verified}
+                  verified={rider.verified}
                   selected={ticked.includes(rider.key)}
                   onToggle={() => toggle(rider.key)}
                   trailing={

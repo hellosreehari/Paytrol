@@ -20,8 +20,12 @@ const SCAN_WINDOW_MS = 10_000;
 const MAX_READS = 3;
 /** Check frames this often. */
 const SAMPLE_EVERY_MS = 100;
-/** Remembered once the person has turned the camera on, so later visits start live. */
+/** Remembered once the person has turned the camera on, so later app opens start live. */
 const CAMERA_ON_KEY = 'paytrol_camera_on';
+
+// Auto-scan only once per app open. This lives in the page's memory, so it
+// survives switching tabs inside the app but resets when the app is opened again.
+let autoScannedThisLaunch = false;
 
 export interface ScanOutcome {
   /** The best reading, or null when nothing could be read. */
@@ -312,6 +316,7 @@ export default function HomeScanner({
   /** Turn the camera on and start a fresh 10-second scan. */
   const startScan = useCallback(async () => {
     if (holdRef.current) return;
+    autoScannedThisLaunch = true;
     if (!navigator.mediaDevices?.getUserMedia) {
       setMessage('This browser can’t use the camera. Choose a photo or type the trip in.');
       setPhase('unavailable');
@@ -376,13 +381,9 @@ export default function HomeScanner({
         setPhase('paused');
         return;
       }
-      // Coming straight back from saving a trip: stay paused.
-      let skip = false;
-      try {
-        skip = Date.now() - Number(sessionStorage.getItem('paytrol_skip_autoscan') || 0) < 5000;
-      } catch {
-        // Ignore: just scan as usual.
-      }
+      // Only the first Home of this app open scans by itself. Coming back
+      // from another tab (or after saving a trip) waits for a tap.
+      const skip = autoScannedThisLaunch;
       let granted = readFlag();
       if (!granted && navigator.permissions?.query) {
         try {
@@ -394,8 +395,10 @@ export default function HomeScanner({
       }
       if (cancelled) return;
       if (granted && skip) setPhase('paused');
-      else if (granted) startScanRef.current();
-      else setPhase('off');
+      else if (granted) {
+        autoScannedThisLaunch = true;
+        startScanRef.current();
+      } else setPhase('off');
     };
     void decide();
     return () => {
@@ -611,7 +614,10 @@ export default function HomeScanner({
           type="button"
           onClick={() => void startScan()}
           disabled={phase === 'checking'}
-          className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-8 pb-10 text-center"
+          className={cn(
+            'absolute inset-0 flex flex-col items-center justify-center gap-2 px-8 text-center',
+            phase === 'off' && 'pb-8'
+          )}
         >
           {phase === 'off' ? (
             <>
