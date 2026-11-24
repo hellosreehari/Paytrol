@@ -6,6 +6,7 @@ import CameraCapture from '@/components/CameraCapture';
 import { useTripStore } from '@/stores/tripStore';
 import { compressImage } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { ArrowLeftIcon } from '@/components/icons';
 
 export default function CapturePage() {
   const router = useRouter();
@@ -169,9 +170,10 @@ export default function CapturePage() {
           <button
             type="button"
             onClick={() => setManualEntry(false)}
-            className="text-xs text-muted hover:text-ink-soft"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-ink-soft hover:bg-surface-soft"
           >
-            ← Back to capture options
+            <ArrowLeftIcon size={16} />
+            Scan a photo instead
           </button>
 
           <div className="rounded-2xl border border-line bg-surface p-4 space-y-4">

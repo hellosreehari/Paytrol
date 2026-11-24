@@ -5,7 +5,8 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { Trip } from '@/types';
 import { RESOURCES, useCachedData } from '@/lib/data-cache';
-import { CheckCircleIcon } from '@/components/icons';
+import { CheckCircleIcon, CheckIcon, ChevronDownIcon } from '@/components/icons';
+import { BTN, BTN_SIZE } from '@/lib/ui';
 
 interface NormalizedBalance {
   id: string;
@@ -25,6 +26,7 @@ export default function BalancesPage() {
   const trips = Array.isArray(tripsResource.data) ? tripsResource.data : [];
   const loading = balancesResource.loading;
   const [settlingId, setSettlingId] = useState<string | null>(null);
+  const [confirmSettleId, setConfirmSettleId] = useState<string | null>(null);
   const [expandedFriendUid, setExpandedFriendUid] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -179,7 +181,7 @@ export default function BalancesPage() {
               return (
                 <div
                   key={`${bal.odataId || bal.id}-${idx}`}
-                  className="rounded-3xl bg-surface border border-line p-4 space-y-3 shadow-lg"
+                  className="rounded-3xl bg-surface border border-line p-4 space-y-3 shadow-sm"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -207,33 +209,78 @@ export default function BalancesPage() {
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-line flex items-center gap-4">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedFriendUid((current) =>
-                          current === bal.friendUid ? null : bal.friendUid
-                        )
-                      }
-                      className="text-xs font-semibold text-primary hover:text-primary-hover"
-                    >
-                      {expandedFriendUid === bal.friendUid ? 'Hide split' : 'View split'}
-                    </button>
-                    {isOwed || bal.isGuest ? (
-                      <button
-                        type="button"
-                        onClick={() => handleSettle(bal.odataId)}
-                        disabled={settlingId === bal.odataId}
-                        className="text-xs font-semibold text-muted hover:text-ink-soft disabled:opacity-50"
-                      >
-                        {settlingId === bal.odataId ? 'Saving…' : 'Mark settled'}
-                      </button>
-                    ) : (
-                      <span className="text-[11px] text-muted">
-                        {bal.friendName} marks this settled once paid
-                      </span>
-                    )}
-                  </div>
+                  {(() => {
+                    const expanded = expandedFriendUid === bal.friendUid;
+                    const tripCount = getTripBreakdown(bal.friendUid).length;
+                    const canSettle = isOwed || bal.isGuest;
+                    const settling = settlingId === bal.odataId;
+                    if (confirmSettleId === bal.odataId) {
+                      return (
+                        <div className="rounded-2xl border border-primary-line bg-primary-soft p-3 space-y-2.5">
+                          <p className="text-xs font-medium text-ink">
+                            {isOwed
+                              ? `Mark ${formatCurrency(absAmount)} from ${bal.friendName} as received?`
+                              : `Mark your ${formatCurrency(absAmount)} to ${bal.friendName} as paid?`}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmSettleId(null)}
+                              disabled={settling}
+                              className={cn(BTN.secondary, BTN_SIZE.md, 'w-full')}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await handleSettle(bal.odataId);
+                                setConfirmSettleId(null);
+                              }}
+                              disabled={settling}
+                              className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
+                            >
+                              <CheckIcon size={16} />
+                              {settling ? 'Saving…' : 'Yes, settled'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-2">
+                        <div className={cn('grid gap-2', canSettle ? 'grid-cols-2' : 'grid-cols-1')}>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedFriendUid(expanded ? null : bal.friendUid)}
+                            aria-expanded={expanded}
+                            className={cn(BTN.secondary, BTN_SIZE.md, 'w-full')}
+                          >
+                            {expanded ? 'Hide split' : `View split${tripCount ? ` (${tripCount})` : ''}`}
+                            <ChevronDownIcon
+                              size={16}
+                              className={cn('transition-transform', expanded && 'rotate-180')}
+                            />
+                          </button>
+                          {canSettle && (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmSettleId(bal.odataId)}
+                              className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
+                            >
+                              <CheckIcon size={16} />
+                              Mark settled
+                            </button>
+                          )}
+                        </div>
+                        {!canSettle && (
+                          <p className="text-center text-[11px] text-muted">
+                            {bal.friendName} marks this settled once you&apos;ve paid.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {expandedFriendUid === bal.friendUid && (
                     <div className="rounded-2xl border border-line bg-canvas p-3 space-y-2">
