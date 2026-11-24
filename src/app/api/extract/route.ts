@@ -5,20 +5,22 @@ import { ExtractionError, extractDashboardReadings } from '@/lib/gemini';
 import { deletePhoto, getPhotoReadUrl, hasBlobConfig, uploadPhoto } from '@/lib/blob-storage';
 
 // Simple per-user guard so one account can't exhaust the shared Gemini quota.
-// Counts are per server instance and reset every 24 hours.
+// Counts are per server instance and reset every 24 hours. Home scans on its
+// own, so a read that finds nothing (the camera saw the road or the ceiling)
+// only counts toward a looser cap on attempts, not toward the scan limit.
 const DAILY_SCAN_LIMIT = Number(process.env.DAILY_SCAN_LIMIT) || 60;
-const scanCounts = new Map<string, { windowStart: number; count: number }>();
+const DAILY_ATTEMPT_LIMIT = DAILY_SCAN_LIMIT * 4;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const scanCounts = new Map<string, { windowStart: number; found: number; attempts: number }>();
 
-function allowScan(userKey: string): boolean {
+function usageFor(userKey: string) {
   const now = Date.now();
-  const entry = scanCounts.get(userKey);
-  if (!entry || now - entry.windowStart > 24 * 60 * 60 * 1000) {
-    scanCounts.set(userKey, { windowStart: now, count: 1 });
-    return true;
+  let entry = scanCounts.get(userKey);
+  if (!entry || now - entry.windowStart > DAY_MS) {
+    entry = { windowStart: now, found: 0, attempts: 0 };
+    scanCounts.set(userKey, entry);
   }
-  if (entry.count >= DAILY_SCAN_LIMIT) return false;
-  entry.count += 1;
-  return true;
+  return entry;
 }
 
 export async function POST(req: NextRequest) {
@@ -29,7 +31,8 @@ export async function POST(req: NextRequest) {
     }
 
     const userKey = session.user.uid || session.user.email || 'unknown';
-    if (!allowScan(userKey)) {
+    const usage = usageFor(userKey);
+    if (usage.found >= DAILY_SCAN_LIMIT || usage.attempts >= DAILY_ATTEMPT_LIMIT) {
       return NextResponse.json(
         { success: false, error: 'Daily scan limit reached. Please enter the trip details manually.' },
         { status: 429 }
@@ -58,6 +61,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    usage.attempts += 1;
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const base64 = buffer.toString('base64');
@@ -79,13 +83,21 @@ export async function POST(req: NextRequest) {
       void uploadPromise.then((url) => deletePhoto(url));
       throw err;
     }
-    const photoURL = await uploadPromise;
+    let photoURL = await uploadPromise;
+    const foundSomething = extraction.distance_km > 0 || extraction.avg_mileage_kmpl > 0;
+    if (foundSomething) {
+      usage.found += 1;
+    } else {
+      // Nothing to keep: don't store a photo of the road.
+      void deletePhoto(photoURL);
+      photoURL = '';
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         // Signed, short-lived link so the private photo can be previewed.
-        photoURL: await getPhotoReadUrl(photoURL),
+        photoURL: photoURL ? await getPhotoReadUrl(photoURL) : '',
         distanceKm: extraction.distance_km,
         avgMileageKmpl: extraction.avg_mileage_kmpl,
         confidenceDistance: extraction.confidence_distance,

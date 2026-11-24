@@ -198,3 +198,47 @@ export const FUEL_TYPE_ICONS = {
   diesel: DropletIcon,
   cng: GasCylinderIcon,
 } as const;
+
+export function CameraIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6.8 6.2a2.3 2.3 0 0 1-1.6 1c-.4.1-.8.1-1.1.2A2.1 2.1 0 0 0 2.25 9.6V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.6a2.1 2.1 0 0 0-1.8-2.2l-1.1-.2a2.3 2.3 0 0 1-1.6-1l-.8-1.3a2.2 2.2 0 0 0-1.8-1 48.8 48.8 0 0 0-5.2 0 2.2 2.2 0 0 0-1.7 1L6.8 6.2Z" />
+      <circle cx="12" cy="12.75" r="4.5" />
+    </Icon>
+  );
+}
+
+export function ImageIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="4.5" width="18" height="15" rx="2.25" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path d="m21 15.5-4.7-4.7a1.5 1.5 0 0 0-2.1 0L5 19.5" />
+    </Icon>
+  );
+}
+
+export function FlashIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M13 2.75 4.75 13.5H12l-1 7.75 8.25-10.75H12l1-7.75Z" />
+    </Icon>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="6.75" />
+      <path d="m20.25 20.25-4.5-4.5" />
+    </Icon>
+  );
+}
+
+export function HomeIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+    </Icon>
+  );
+}

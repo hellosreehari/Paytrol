@@ -60,6 +60,8 @@ export default function ResultPage() {
     sessionStorage.removeItem('paytrol_tripResult');
     sessionStorage.removeItem('paytrol_manualEntry');
     reset();
+    // Just saved a trip: show Home paused instead of scanning again straight away.
+    sessionStorage.setItem('paytrol_skip_autoscan', String(Date.now()));
     router.push('/home');
   };
 
