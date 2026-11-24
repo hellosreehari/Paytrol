@@ -7,6 +7,9 @@ import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 import { invalidate, prefetchData, RESOURCES, useCachedData } from '@/lib/data-cache';
 import { cleanTripName, collectTripTags, tripHasTag } from '@/lib/trip-labels';
 import TripLabelsFields from '@/components/TripLabelsFields';
+import { CheckIcon, TrashIcon, UserPlusIcon, VerifiedIcon } from '@/components/icons';
+import { BTN, BTN_SIZE } from '@/lib/ui';
+import { cn } from '@/lib/utils';
 
 export default function HistoryPage() {
   const { user } = useAuth();
@@ -38,6 +41,14 @@ export default function HistoryPage() {
   const [nameDraft, setNameDraft] = useState('');
   const [tagsDraft, setTagsDraft] = useState<string[]>([]);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+
+  // Guests linked to someone who is already a friend are shown once, as the friend.
+  const friendUids = new Set(
+    friends
+      .map((friend) => (friend.fromUid === currentUserId ? friend.toUid : friend.fromUid))
+      .filter((uid): uid is string => Boolean(uid))
+  );
+  const availableGuests = guestContacts.filter((guest) => !guest.linkedUid || !friendUids.has(guest.linkedUid));
 
   const allTags = collectTripTags(trips);
   const activeTagFilter = tagFilter && allTags.some((tag) => tag.toLocaleLowerCase() === tagFilter.toLocaleLowerCase())
@@ -500,67 +511,59 @@ export default function HistoryPage() {
                 </span>
               </div>
 
-              <button
-                type="button"
-                role="switch"
-                aria-checked={includeCreatorDraft}
-                onClick={() => setIncludeCreatorDraft((current) => !current)}
-                className="flex w-full items-center justify-between rounded-xl border border-line bg-surface px-3 py-2.5"
-              >
-                <span className="text-xs font-medium text-ink">Include me</span>
-                <span
-                  className={includeCreatorDraft
-                    ? 'h-5 w-9 rounded-full bg-primary p-0.5'
-                    : 'h-5 w-9 rounded-full bg-line-strong p-0.5'}
-                >
-                  <span
-                    className={includeCreatorDraft
-                      ? 'block h-4 w-4 translate-x-4 rounded-full bg-surface'
-                      : 'block h-4 w-4 rounded-full bg-surface'}
-                  />
-                </span>
-              </button>
+              <PersonToggle
+                name="You"
+                subtitle="Include me in this split"
+                photo={user?.image}
+                verified
+                selected={includeCreatorDraft}
+                onToggle={() => setIncludeCreatorDraft((current) => !current)}
+              />
 
+              {friends.length > 0 && (
+                <p className="pt-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Friends</p>
+              )}
               {friends.map((friend) => {
-                const friendUid =
-                  friend.fromUid === currentUserId ? friend.toUid : friend.fromUid;
-                const friendName =
-                  friend.fromUid === currentUserId ? friend.toName : friend.fromName;
+                const isFrom = friend.fromUid === currentUserId;
+                const friendUid = isFrom ? friend.toUid : friend.fromUid;
                 if (!friendUid) return null;
                 const key = `friend:${friendUid}`;
-                const selected = selectedParticipantIds.includes(key);
                 return (
-                  <button
-                    type="button"
+                  <PersonToggle
                     key={friend.id}
-                    onClick={() => toggleParticipant(key)}
-                    aria-pressed={selected}
-                    className={selected
-                      ? 'flex w-full items-center justify-between rounded-xl border border-line-strong bg-surface-soft px-3 py-2.5'
-                      : 'flex w-full items-center justify-between rounded-xl border border-line bg-surface px-3 py-2.5'}
-                  >
-                    <span className="text-xs font-medium text-ink">{friendName}</span>
-                    <span className="text-xs text-muted">{selected ? 'Added' : 'Add'}</span>
-                  </button>
+                    name={(isFrom ? friend.toName : friend.fromName) || 'Friend'}
+                    subtitle={isFrom ? friend.toEmail : friend.fromEmail}
+                    photo={isFrom ? friend.toPhoto : friend.fromPhoto}
+                    verified
+                    selected={selectedParticipantIds.includes(key)}
+                    onToggle={() => toggleParticipant(key)}
+                  />
                 );
               })}
 
-              {guestContacts.map((guest) => {
+              <p className="pt-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
+                Guests{availableGuests.length > 0 ? ` (${availableGuests.length})` : ''}
+              </p>
+              {availableGuests.length === 0 && (
+                <p className="text-[11px] text-muted">No guests yet. Add one below.</p>
+              )}
+              {availableGuests.map((guest) => {
                 const key = `guest:${guest.id}`;
-                const selected = selectedParticipantIds.includes(key);
                 return (
-                  <button
-                    type="button"
+                  <PersonToggle
                     key={guest.id}
-                    onClick={() => toggleParticipant(key)}
-                    aria-pressed={selected}
-                    className={selected
-                      ? 'flex w-full items-center justify-between rounded-xl border border-line-strong bg-surface-soft px-3 py-2.5'
-                      : 'flex w-full items-center justify-between rounded-xl border border-line bg-surface px-3 py-2.5'}
-                  >
-                    <span className="text-xs font-medium text-ink">{guest.name}</span>
-                    <span className="text-xs text-muted">{selected ? 'Added' : 'Add'}</span>
-                  </button>
+                    name={guest.name}
+                    subtitle={
+                      guest.linkedUid
+                        ? 'Linked account'
+                        : guest.email
+                          ? `Guest · links when ${guest.email} signs in`
+                          : 'Guest · no account'
+                    }
+                    verified={Boolean(guest.linkedUid)}
+                    selected={selectedParticipantIds.includes(key)}
+                    onToggle={() => toggleParticipant(key)}
+                  />
                 );
               })}
 
@@ -569,70 +572,144 @@ export default function HistoryPage() {
                   value={quickGuestName}
                   onChange={(event) => setQuickGuestName(event.target.value)}
                   maxLength={80}
-                  placeholder="Add a guest"
+                  placeholder="New guest name"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addQuickGuest();
+                    }
+                  }}
                   className="min-w-0 flex-1 rounded-xl border border-line bg-canvas px-3 py-2.5 text-xs text-ink outline-none focus:border-line-strong"
                 />
                 <button
                   type="button"
                   onClick={addQuickGuest}
                   disabled={!quickGuestName.trim() || addingGuest}
-                  className="rounded-xl border border-line px-3 py-2.5 text-xs font-semibold text-primary disabled:opacity-50"
+                  className={cn(BTN.soft, BTN_SIZE.sm)}
                 >
-                  {addingGuest ? 'Adding…' : 'Add'}
+                  <UserPlusIcon size={15} />
+                  {addingGuest ? 'Adding…' : 'Add guest'}
                 </button>
               </div>
             </div>
 
-            <div className="mt-5 flex items-center justify-between gap-3">
+            <div className="mt-5 space-y-3 border-t border-line pt-4">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  disabled={savingEdit}
+                  className={cn(BTN.secondary, BTN_SIZE.md, 'w-full')}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit || deletingTrip}
+                  className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
+                >
+                  <CheckIcon size={16} />
+                  {savingEdit ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+
               {confirmDeleteTrip ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDeleteTrip(false)}
-                    disabled={deletingTrip}
-                    className="px-2.5 py-2 text-xs font-semibold text-muted"
-                  >
-                    Keep
-                  </button>
-                  <button
-                    type="button"
-                    onClick={deleteTrip}
-                    disabled={deletingTrip}
-                    className="rounded-xl border border-danger-line bg-danger px-3 py-2 text-xs font-semibold text-danger disabled:opacity-50"
-                  >
-                    {deletingTrip ? 'Deleting…' : 'Delete now'}
-                  </button>
+                <div className="rounded-2xl border border-danger-line bg-danger-soft p-3 space-y-2.5">
+                  <p className="text-xs font-medium text-danger">
+                    Delete this trip? Everyone&apos;s balance is adjusted to remove it.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteTrip(false)}
+                      disabled={deletingTrip}
+                      className={cn(BTN.secondary, BTN_SIZE.sm, 'w-full')}
+                    >
+                      Keep trip
+                    </button>
+                    <button
+                      type="button"
+                      onClick={deleteTrip}
+                      disabled={deletingTrip}
+                      className={cn(BTN.danger, BTN_SIZE.sm, 'w-full')}
+                    >
+                      <TrashIcon size={15} />
+                      {deletingTrip ? 'Deleting…' : 'Delete trip'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => setConfirmDeleteTrip(true)}
-                  className="px-2.5 py-2 text-xs font-semibold text-danger hover:text-danger"
+                  disabled={savingEdit}
+                  className={cn(BTN.dangerOutline, BTN_SIZE.sm, 'w-full')}
                 >
+                  <TrashIcon size={15} />
                   Delete trip
                 </button>
               )}
-              <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={closeEdit}
-                disabled={savingEdit}
-                className="px-3 py-2.5 text-xs font-semibold text-muted hover:text-ink"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingEdit}
-                className="rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary hover:bg-primary-hover disabled:opacity-50"
-              >
-                {savingEdit ? 'Saving…' : 'Save changes'}
-              </button>
-              </div>
             </div>
           </form>
         </div>
       )}
     </div>
+  );
+}
+
+function PersonToggle({
+  name,
+  subtitle,
+  photo,
+  verified,
+  selected,
+  onToggle,
+}: {
+  name: string;
+  subtitle?: string | null;
+  photo?: string | null;
+  verified?: boolean;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={selected}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+        selected ? 'border-primary-line bg-primary-soft' : 'border-line bg-surface hover:bg-surface-soft'
+      )}
+    >
+      <span
+        className={cn(
+          'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
+          selected ? 'border-primary bg-primary text-on-primary' : 'border-line-strong bg-surface'
+        )}
+      >
+        {selected && <CheckIcon size={14} strokeWidth={2.4} />}
+      </span>
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt="" className="h-8 w-8 shrink-0 rounded-full" />
+      ) : (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-soft text-xs font-bold text-muted">
+          {name[0]?.toUpperCase() || '?'}
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1 text-xs font-semibold text-ink">
+          <span className="truncate">{name}</span>
+          {verified && (
+            <span title="Signed in to Paytrol" className="shrink-0 text-primary">
+              <VerifiedIcon size={14} />
+              <span className="sr-only">Verified account</span>
+            </span>
+          )}
+        </span>
+        {subtitle && <span className="block truncate text-[11px] text-muted">{subtitle}</span>}
+      </span>
+    </button>
   );
 }

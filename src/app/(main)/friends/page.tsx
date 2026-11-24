@@ -4,7 +4,7 @@ import { useState, useId } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { Friendship, GuestContact } from '@/types';
-import { AlertCircleIcon, CheckCircleIcon } from '@/components/icons';
+import { AlertCircleIcon, CheckCircleIcon, LinkIcon, PencilIcon, TrashIcon, UserPlusIcon, VerifiedIcon } from '@/components/icons';
 import { invalidate, RESOURCES, useCachedData } from '@/lib/data-cache';
 
 interface FriendLists {
@@ -42,6 +42,10 @@ export default function FriendsPage() {
   const [deletingFriendId, setDeletingFriendId] = useState<string | null>(null);
   const [confirmDeleteGuestId, setConfirmDeleteGuestId] = useState<string | null>(null);
   const [deletingGuestId, setDeletingGuestId] = useState<string | null>(null);
+  const [showAddGuest, setShowAddGuest] = useState(false);
+  const [newGuestName, setNewGuestName] = useState('');
+  const [newGuestEmail, setNewGuestEmail] = useState('');
+  const [addingGuest, setAddingGuest] = useState(false);
   const [bannerNotice, setBannerNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchFriendsList = () => {
@@ -197,6 +201,67 @@ export default function FriendsPage() {
     }
   };
 
+  const handleAddGuest = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const name = newGuestName.trim().replace(/\s+/g, ' ');
+    const email = newGuestEmail.trim();
+    if (!name) return;
+    setAddingGuest(true);
+    setBannerNotice(null);
+    try {
+      const res = await fetch('/api/guests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Could not add guest.');
+      }
+      let guest = data.data as GuestContact;
+      setGuestContacts((current) => [guest, ...current]);
+
+      // An email is optional; saving it links the guest to their account
+      // now (if they already use Paytrol) or when they first sign in.
+      if (email) {
+        const linkRes = await fetch('/api/guests', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guestId: guest.id, name: guest.name, email }),
+        });
+        const linkData = await linkRes.json();
+        if (!linkRes.ok || !linkData.success) {
+          setNewGuestName('');
+          setNewGuestEmail('');
+          setShowAddGuest(false);
+          throw new Error(`${guest.name} was added, but the email wasn’t saved: ${linkData.error || 'try again from Edit.'}`);
+        }
+        guest = linkData.data as GuestContact;
+        setGuestContacts((current) => current.map((item) => (item.id === guest.id ? guest : item)));
+        if (guest.linkedUid) invalidate([RESOURCES.trips, RESOURCES.balances, RESOURCES.friends]);
+      }
+
+      setNewGuestName('');
+      setNewGuestEmail('');
+      setShowAddGuest(false);
+      setBannerNotice({
+        type: 'success',
+        text: guest.linkedUid
+          ? `${guest.name} already uses Paytrol, so the guest is linked to their account.`
+          : guest.email
+            ? `${guest.name} added. They’ll be linked when they sign in with ${guest.email}.`
+            : `${guest.name} added as a guest.`,
+      });
+    } catch (error: unknown) {
+      setBannerNotice({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Could not add guest.',
+      });
+    } finally {
+      setAddingGuest(false);
+    }
+  };
+
   const currentUserId = user?.uid || '';
 
   return (
@@ -290,6 +355,7 @@ export default function FriendsPage() {
                   <Row
                     key={f.id}
                     name={fName}
+                    verified
                     subtitle={isFrom ? f.toEmail : f.fromEmail}
                     photo={isFrom ? f.toPhoto : f.fromPhoto}
                     actions={
@@ -339,10 +405,62 @@ export default function FriendsPage() {
       <Section
         title="Guests"
         count={guestContacts.length}
-        hint="Add an email later to link their trips and balance when they join Paytrol."
+        hint="People who don't use Paytrol yet. Add their email and their trips and balance move to their account when they sign in."
+        action={
+          !showAddGuest && (
+            <button type="button" onClick={() => setShowAddGuest(true)} className={BTN_SOFT}>
+              <UserPlusIcon size={16} />
+              Add guest
+            </button>
+          )
+        }
       >
+        {showAddGuest && (
+          <form onSubmit={handleAddGuest} className="space-y-3 rounded-2xl border border-primary-line bg-surface p-4">
+            <label className="block space-y-1.5">
+              <span className="text-[11px] font-medium text-muted">Name</span>
+              <input
+                value={newGuestName}
+                onChange={(event) => setNewGuestName(event.target.value)}
+                maxLength={80}
+                required
+                autoFocus
+                placeholder="e.g. Rahul"
+                className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-[11px] font-medium text-muted">
+                Email <span className="text-subtle">(optional, to link their account)</span>
+              </span>
+              <input
+                type="email"
+                value={newGuestEmail}
+                onChange={(event) => setNewGuestEmail(event.target.value)}
+                placeholder="rahul@example.com"
+                className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddGuest(false);
+                  setNewGuestName('');
+                  setNewGuestEmail('');
+                }}
+                className={`${BTN_SECONDARY} w-full`}
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={addingGuest || !newGuestName.trim()} className={`${BTN_PRIMARY} w-full`}>
+                {addingGuest ? 'Adding…' : 'Add guest'}
+              </button>
+            </div>
+          </form>
+        )}
         {guestContacts.length === 0 ? (
-          <Empty>Guests you add while splitting a trip will show up here.</Empty>
+          !showAddGuest && <Empty>No guests yet. Add someone who doesn&apos;t use Paytrol to split trips with them.</Empty>
         ) : (
           guestContacts.map((guest) =>
             editingGuestId === guest.id ? (
@@ -391,7 +509,14 @@ export default function FriendsPage() {
               <Row
                 key={guest.id}
                 name={guest.name}
-                subtitle={guest.linkedUid ? 'Account linked' : guest.email || 'No email added'}
+                verified={Boolean(guest.linkedUid)}
+                subtitle={
+                  guest.linkedUid
+                    ? `Linked to ${guest.email || 'their account'}`
+                    : guest.email
+                      ? `Links when ${guest.email} signs in`
+                      : 'No email yet'
+                }
                 actions={
                   confirmDeleteGuestId === guest.id ? (
                     <>
@@ -416,12 +541,27 @@ export default function FriendsPage() {
                           setGuestNameDraft(guest.name);
                           setGuestEmailDraft(guest.email || '');
                         }}
-                        className={BTN_SECONDARY}
+                        className={guest.email || guest.linkedUid ? `${BTN_SECONDARY} w-9 px-0` : BTN_SECONDARY}
+                        aria-label={guest.email || guest.linkedUid ? `Edit ${guest.name}` : `Link an email for ${guest.name}`}
+                        title={guest.email || guest.linkedUid ? 'Edit guest' : 'Link email'}
                       >
-                        Edit
+                        {guest.email || guest.linkedUid ? (
+                          <PencilIcon size={15} />
+                        ) : (
+                          <>
+                            <LinkIcon size={14} />
+                            Link email
+                          </>
+                        )}
                       </button>
-                      <button type="button" onClick={() => setConfirmDeleteGuestId(guest.id)} className={BTN_SECONDARY}>
-                        Delete
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteGuestId(guest.id)}
+                        className={`${BTN_SECONDARY} w-9 px-0`}
+                        aria-label={`Delete ${guest.name}`}
+                        title="Delete guest"
+                      >
+                        <TrashIcon size={16} />
                       </button>
                     </>
                   )
@@ -437,25 +577,29 @@ export default function FriendsPage() {
 
 // One button style per role, used everywhere on this page.
 const BTN_BASE =
-  'inline-flex h-9 shrink-0 items-center justify-center rounded-xl px-3.5 text-xs font-semibold transition-colors disabled:opacity-50';
+  'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 text-xs font-semibold transition-colors disabled:opacity-50';
 const BTN_PRIMARY = `${BTN_BASE} bg-primary text-on-primary hover:bg-primary-hover`;
 const BTN_SECONDARY = `${BTN_BASE} border border-line bg-surface text-ink hover:bg-surface-soft`;
 const BTN_DANGER = `${BTN_BASE} bg-danger text-on-primary hover:bg-danger-hover`;
+const BTN_SOFT = `${BTN_BASE} bg-primary-soft text-primary hover:bg-surface-soft`;
 
 function Section({
   title,
   count,
   hint,
+  action,
   children,
 }: {
   title: string;
   count?: number;
   hint?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="space-y-2.5">
       <div>
+        <div className="flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
           {title}
           {count ? (
@@ -464,6 +608,8 @@ function Section({
             </span>
           ) : null}
         </h2>
+        {action}
+        </div>
         {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
       </div>
       <div className="space-y-2">{children}</div>
@@ -476,8 +622,10 @@ function Row({
   subtitle,
   photo,
   actions,
+  verified,
 }: {
   name: string;
+  verified?: boolean;
   subtitle?: string | null;
   photo?: string | null;
   actions?: React.ReactNode;
@@ -494,7 +642,15 @@ function Row({
           </div>
         )}
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-ink">{name}</p>
+          <p className="flex items-center gap-1 text-sm font-semibold text-ink">
+            <span className="truncate">{name}</span>
+            {verified && (
+              <span title="Signed in to Paytrol" className="shrink-0 text-primary">
+                <VerifiedIcon size={15} />
+                <span className="sr-only">Verified account</span>
+              </span>
+            )}
+          </p>
           {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
         </div>
       </div>
