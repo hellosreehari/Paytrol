@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   // Baked in at build time so /api/health can say which commit is running.
   env: { BUILD_SHA: process.env.GITHUB_SHA || 'dev' },
   allowedDevOrigins: ['192.168.1.11', 'localhost'],
+  // The Scan, Verify and Split pages became the scanner and review sheet on Home.
+  async redirects() {
+    return ['/capture', '/verify', '/split'].map((source) => ({ source, destination: '/home', permanent: false }));
+  },
   // Security headers (previously only in staticwebapp.config.json, which App Service ignores).
   async headers() {
     return [
