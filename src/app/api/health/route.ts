@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { describeDatabaseConfigProblem, getStorageMode, pingDatabase } from '@/lib/db';
 import { hasBlobConfig, pingBlobStorage } from '@/lib/blob-storage';
-import { getGeminiModelName, hasGeminiConfig } from '@/lib/gemini';
+import { getGeminiModelNames, hasGeminiConfig } from '@/lib/gemini';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +36,7 @@ export async function GET() {
     : { status: 'warning', detail: 'AZURE_STORAGE_CONNECTION_STRING is not set: photos are stored inline in trips' };
 
   const scanning: Check = hasGeminiConfig()
-    ? { status: 'ok', detail: `Gemini model ${getGeminiModelName()}` }
+    ? { status: 'ok', detail: `Gemini models, tried in order: ${getGeminiModelNames().join(', ')}` }
     : { status: 'error', detail: 'GEMINI_API_KEY is not set: dashboard scanning is unavailable' };
 
   const auth: Check =

@@ -21,7 +21,7 @@ Paytrol runs on **Azure App Service (Linux, Node 24)** and deploys from GitHub A
 | `NEXTAUTH_SECRET` | yes | random 32+ characters |
 | `NEXTAUTH_URL` | yes | e.g. `https://paytrol.azurewebsites.net` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | yes | Google OAuth client |
-| `GEMINI_API_KEY` | yes | Google AI Studio key; optional `GEMINI_MODEL` (default `gemini-2.5-flash`) |
+| `GEMINI_API_KEY` | yes | Google AI Studio key; optional `GEMINI_MODEL` to try first (comma-separated list allowed); it falls back to `gemini-3.8-flash`, `gemini-3.6-flash`, then `gemini-flash-latest` |
 | `AZURE_COSMOS_CONNECTIONSTRING` (or `MONGODB_URI`) | yes | MongoDB connection string (`mongodb://...`) from Azure Cosmos DB for MongoDB, or any MongoDB; database `MONGODB_DATABASE` (default `paytrol`) is created automatically |
 | `AZURE_STORAGE_CONNECTION_STRING` | recommended | photos go to the private `dashboard-photos` container; without it photos are stored inside trips |
 | `CRON_SECRET` | recommended | protects `/api/retention/cleanup` |

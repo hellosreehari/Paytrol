@@ -1,10 +1,34 @@
-import { GoogleGenerativeAI, SchemaType, type ResponseSchema } from '@google/generative-ai';
+import { GoogleGenAI, ThinkingLevel, Type, type GenerateContentConfig, type Schema } from '@google/genai';
 
-// gemini-1.5-* models have been retired. Override with GEMINI_MODEL if needed.
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+/**
+ * Models to try, in order. A model that is retired, or closed to new API keys
+ * (gemini-2.5-flash now answers 404 for keys that never used it), is skipped
+ * and the next one is tried. GEMINI_MODEL, if set, goes first and may hold a
+ * comma-separated list.
+ */
+export const DEFAULT_GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-flash-latest'];
+
+/** Give up on one model call after this long, so the user isn't left waiting. */
+const REQUEST_TIMEOUT_MS = 30_000;
+
+export function getGeminiModelNames(): string[] {
+  const configured = (process.env.GEMINI_MODEL || '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
+  return [...new Set([...configured, ...DEFAULT_GEMINI_MODELS])];
+}
+
+// The first model that answered, so later scans skip the ones that don't.
+let workingModel: string | null = null;
 
 export function getGeminiModelName(): string {
-  return process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+  return workingModel || getGeminiModelNames()[0];
+}
+
+/** Test hook: forget which model answered last. */
+export function resetGeminiModelCache(): void {
+  workingModel = null;
 }
 
 export function hasGeminiConfig(): boolean {
@@ -12,30 +36,30 @@ export function hasGeminiConfig(): boolean {
   return Boolean(apiKey && apiKey !== 'your-gemini-api-key');
 }
 
-const CONFIDENCE: ResponseSchema = {
-  type: SchemaType.STRING,
+const CONFIDENCE: Schema = {
+  type: Type.STRING,
   format: 'enum',
   enum: ['high', 'medium', 'low'],
 };
 
 // The model only reads what is printed. Unit conversion happens in code,
 // because language models are unreliable at arithmetic.
-const responseSchema: ResponseSchema = {
-  type: SchemaType.OBJECT,
+const responseSchema: Schema = {
+  type: Type.OBJECT,
   properties: {
-    trip_distance_found: { type: SchemaType.BOOLEAN },
-    trip_distance_value: { type: SchemaType.NUMBER },
-    trip_distance_unit: { type: SchemaType.STRING, format: 'enum', enum: ['km', 'mi'] },
-    average_economy_found: { type: SchemaType.BOOLEAN },
-    average_economy_value: { type: SchemaType.NUMBER },
+    trip_distance_found: { type: Type.BOOLEAN },
+    trip_distance_value: { type: Type.NUMBER },
+    trip_distance_unit: { type: Type.STRING, format: 'enum', enum: ['km', 'mi'] },
+    average_economy_found: { type: Type.BOOLEAN },
+    average_economy_value: { type: Type.NUMBER },
     average_economy_unit: {
-      type: SchemaType.STRING,
+      type: Type.STRING,
       format: 'enum',
       enum: ['km/l', 'l/100km', 'mpg_us', 'mpg_uk'],
     },
     confidence_distance: CONFIDENCE,
     confidence_mileage: CONFIDENCE,
-    raw_text: { type: SchemaType.STRING },
+    raw_text: { type: Type.STRING },
   },
   required: [
     'trip_distance_found',
@@ -161,6 +185,9 @@ export function describeGeminiError(err: unknown): ExtractionError {
   const status = (err as { status?: number })?.status;
   const message = err instanceof Error ? err.message : String(err);
 
+  if ((err as { name?: string })?.name === 'AbortError' || /aborted|timed? ?out|deadline/i.test(message)) {
+    return new ExtractionError('Reading the photo took too long. Please try again, or enter the trip manually.', 504, { cause: err });
+  }
   if (status === 429 || /quota|rate limit|resource.?exhausted/i.test(message)) {
     return new ExtractionError('The scanning service is busy or out of quota. Please try again in a minute, or enter the trip manually.', 503, { cause: err });
   }
@@ -182,9 +209,55 @@ export function describeGeminiError(err: unknown): ExtractionError {
   return new ExtractionError('Could not read the dashboard. Please try a clearer photo, or enter the trip manually.', 502, { cause: err });
 }
 
+/** True when the model itself is missing, retired or closed to this key, so another model is worth trying. */
+export function isModelUnavailable(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  const message = err instanceof Error ? err.message : String(err);
+  if (status === 404) return true;
+  if (status === 400 && /api key/i.test(message)) return false;
+  return /model.*(not found|is not supported|no longer available|not available|deprecated)|(not found|unsupported).*model/i.test(message);
+}
+
+function configFor(model: string, withThinking: boolean): GenerateContentConfig {
+  const config: GenerateContentConfig = {
+    temperature: 0,
+    responseMimeType: 'application/json',
+    responseSchema,
+    abortSignal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  };
+  // Reading two printed numbers needs little reasoning: low thinking keeps
+  // Gemini 3 models fast. Older models don't accept thinkingLevel.
+  if (withThinking && /^gemini-[3-9]/.test(model)) {
+    config.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+  }
+  return config;
+}
+
+type GenerateFn = (model: string, config: GenerateContentConfig, parts: unknown[]) => Promise<string>;
+
+let generateOverride: GenerateFn | null = null;
+
+/** Test hook: replace the Gemini call. */
+export function setGeminiGenerateForTests(fn: GenerateFn | null): void {
+  generateOverride = fn;
+}
+
+function defaultGenerate(): GenerateFn {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+  return async (model, config, parts) => {
+    const response = await ai.models.generateContent({
+      model,
+      contents: [{ role: 'user', parts: parts as never }],
+      config,
+    });
+    return response.text ?? '';
+  };
+}
+
 /**
  * Extract trip distance and average fuel economy from a car dashboard photo
- * using Gemini vision with a JSON response schema.
+ * using Gemini vision with a JSON response schema. Tries each configured
+ * model in turn when one is unavailable.
  */
 export async function extractDashboardReadings(
   imageBase64: string,
@@ -194,24 +267,44 @@ export async function extractDashboardReadings(
     throw new ExtractionError('Scanning is not set up (GEMINI_API_KEY is missing). Please enter the trip manually.', 503);
   }
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  const model = genAI.getGenerativeModel({
-    model: getGeminiModelName(),
-    generationConfig: {
-      temperature: 0,
-      responseMimeType: 'application/json',
-      responseSchema,
-    },
-  });
+  const generate = generateOverride ?? defaultGenerate();
+  const parts = [{ text: PROMPT }, { inlineData: { mimeType, data: imageBase64 } }];
+  const models = workingModel
+    ? [workingModel, ...getGeminiModelNames().filter((m) => m !== workingModel)]
+    : getGeminiModelNames();
 
-  let text: string;
-  try {
-    const result = await model.generateContent([PROMPT, { inlineData: { mimeType, data: imageBase64 } }]);
-    text = result.response.text();
-  } catch (err: unknown) {
-    const described = describeGeminiError(err);
-    console.error(`Gemini vision extraction failed (model ${getGeminiModelName()}):`, err);
-    throw described;
+  let text: string | null = null;
+  let lastError: unknown = null;
+  for (const model of models) {
+    try {
+      try {
+        text = await generate(model, configFor(model, true), parts);
+      } catch (err: unknown) {
+        // A model that rejects the thinking setting still deserves a plain try.
+        const message = err instanceof Error ? err.message : String(err);
+        if ((err as { status?: number })?.status !== 400 || !/thinking/i.test(message)) throw err;
+        text = await generate(model, configFor(model, false), parts);
+      }
+      workingModel = model;
+      break;
+    } catch (err: unknown) {
+      lastError = err;
+      if (!isModelUnavailable(err)) {
+        console.error(`Gemini vision extraction failed (model ${model}):`, err);
+        throw describeGeminiError(err);
+      }
+      console.warn(`Gemini model ${model} is unavailable, trying the next one:`, err instanceof Error ? err.message : err);
+      if (workingModel === model) workingModel = null;
+    }
+  }
+
+  if (text === null) {
+    console.error(`No Gemini model answered (tried ${models.join(', ')}):`, lastError);
+    throw new ExtractionError(
+      `Scanning is not set up correctly (none of the Gemini models ${models.join(', ')} are available to this API key). Please enter the trip manually.`,
+      503,
+      { cause: lastError }
+    );
   }
 
   try {

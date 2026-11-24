@@ -1,5 +1,17 @@
-import { describe, expect, it } from 'vitest';
-import { describeGeminiError, normalizeExtraction, toKilometres, toKmPerLitre } from './gemini';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  DEFAULT_GEMINI_MODELS,
+  describeGeminiError,
+  extractDashboardReadings,
+  getGeminiModelName,
+  getGeminiModelNames,
+  isModelUnavailable,
+  normalizeExtraction,
+  resetGeminiModelCache,
+  setGeminiGenerateForTests,
+  toKilometres,
+  toKmPerLitre,
+} from './gemini';
 
 describe('unit conversion', () => {
   it('converts distance units', () => {
@@ -68,5 +80,85 @@ describe('describeGeminiError', () => {
   it('explains a rejected API key', () => {
     const err = describeGeminiError(Object.assign(new Error('API key not valid'), { status: 400 }));
     expect(err.message).toMatch(/API key/);
+  });
+});
+
+describe('extractDashboardReadings model fallback', () => {
+  const reading = JSON.stringify({
+    trip_distance_found: true,
+    trip_distance_value: 12,
+    trip_distance_unit: 'km',
+    average_economy_found: true,
+    average_economy_value: 15,
+    average_economy_unit: 'km/l',
+    confidence_distance: 'high',
+    confidence_mileage: 'high',
+    raw_text: 'Trip A 12 km; Avg 15 km/l',
+  });
+  const notFound = (model: string) =>
+    Object.assign(new Error(`models/${model} is not found for API version v1beta`), { status: 404 });
+
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = 'test-key';
+    delete process.env.GEMINI_MODEL;
+    resetGeminiModelCache();
+  });
+  afterEach(() => setGeminiGenerateForTests(null));
+
+  it('skips a model that is not available and remembers the one that works', async () => {
+    const calls: string[] = [];
+    setGeminiGenerateForTests(async (model) => {
+      calls.push(model);
+      if (model === 'gemini-2.5-flash') throw notFound(model);
+      return reading;
+    });
+    process.env.GEMINI_MODEL = 'gemini-2.5-flash';
+
+    const result = await extractDashboardReadings('aGk=');
+    expect(result.distance_km).toBe(12);
+    expect(calls).toEqual(['gemini-2.5-flash', DEFAULT_GEMINI_MODELS[0]]);
+    expect(getGeminiModelName()).toBe(DEFAULT_GEMINI_MODELS[0]);
+
+    calls.length = 0;
+    await extractDashboardReadings('aGk=');
+    expect(calls).toEqual([DEFAULT_GEMINI_MODELS[0]]);
+  });
+
+  it('asks Gemini 3 models for low thinking, and retries without it if refused', async () => {
+    const configs: unknown[] = [];
+    setGeminiGenerateForTests(async (_model, config) => {
+      configs.push(config.thinkingConfig);
+      if (config.thinkingConfig) throw Object.assign(new Error('thinking_level is not supported'), { status: 400 });
+      return reading;
+    });
+    await extractDashboardReadings('aGk=');
+    expect(configs).toEqual([{ thinkingLevel: 'LOW' }, undefined]);
+  });
+
+  it('does not try other models for a quota error', async () => {
+    const calls: string[] = [];
+    setGeminiGenerateForTests(async (model) => {
+      calls.push(model);
+      throw Object.assign(new Error('Resource exhausted'), { status: 429 });
+    });
+    await expect(extractDashboardReadings('aGk=')).rejects.toThrow(/quota/);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('says so when no model is available', async () => {
+    setGeminiGenerateForTests(async (model) => {
+      throw notFound(model);
+    });
+    await expect(extractDashboardReadings('aGk=')).rejects.toThrow(/none of the Gemini models/);
+  });
+
+  it('puts GEMINI_MODEL first and accepts a list', () => {
+    process.env.GEMINI_MODEL = 'a, b';
+    expect(getGeminiModelNames()).toEqual(['a', 'b', ...DEFAULT_GEMINI_MODELS]);
+  });
+
+  it('treats a 404 as an unavailable model but not a bad key', () => {
+    expect(isModelUnavailable(notFound('x'))).toBe(true);
+    expect(isModelUnavailable(Object.assign(new Error('API key not valid'), { status: 400 }))).toBe(false);
   });
 });
