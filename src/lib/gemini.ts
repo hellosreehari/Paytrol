@@ -26,9 +26,30 @@ export function getGeminiModelName(): string {
   return workingModel || getGeminiModelNames()[0];
 }
 
-/** Test hook: forget which model answered last. */
+// Models that answered 429 (rate limit or quota), and until when to leave them alone.
+// Each model has its own quota, so another model can still read the photo.
+const coolingUntil = new Map<string, number>();
+
+/** Test hook: forget which model answered last and which are rate limited. */
 export function resetGeminiModelCache(): void {
   workingModel = null;
+  coolingUntil.clear();
+}
+
+/** True for a rate limit or used-up quota (HTTP 429). */
+export function isQuotaError(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  const message = err instanceof Error ? err.message : String(err);
+  return status === 429 || /quota|rate limit|resource.?exhausted/i.test(message);
+}
+
+/** How long to skip a model after a 429: Google's retryDelay if given, an hour for a daily quota, else a minute. */
+export function quotaCooldownMs(err: unknown): number {
+  const message = err instanceof Error ? err.message : String(err);
+  const delay = message.match(/retry ?delay"?\s*:\s*"?(\d+(?:\.\d+)?)s/i) ?? message.match(/retry in (\d+(?:\.\d+)?)\s*s/i);
+  if (delay) return Math.min(Math.ceil(Number(delay[1])) * 1000, 60 * 60 * 1000);
+  if (/per ?day|PerDay|daily/i.test(message)) return 60 * 60 * 1000;
+  return 60 * 1000;
 }
 
 export function hasGeminiConfig(): boolean {
@@ -311,9 +332,13 @@ export async function extractDashboardReadings(
 
   const generate = generateOverride ?? defaultGenerate();
   const parts = [{ text: PROMPT }, { inlineData: { mimeType, data: imageBase64 } }];
-  const models = workingModel
+  const ordered = workingModel
     ? [workingModel, ...getGeminiModelNames().filter((m) => m !== workingModel)]
     : getGeminiModelNames();
+  // Skip models that are still rate limited, unless every model is.
+  const now = Date.now();
+  const ready = ordered.filter((m) => (coolingUntil.get(m) ?? 0) <= now);
+  const models = ready.length > 0 ? ready : ordered;
 
   let text: string | null = null;
   let lastError: unknown = null;
@@ -326,7 +351,9 @@ export async function extractDashboardReadings(
       break;
     } catch (err: unknown) {
       lastError = err;
-      if (!isModelUnavailable(err) && !isServerSideFailure(err)) {
+      const quota = isQuotaError(err);
+      if (quota) coolingUntil.set(model, Date.now() + quotaCooldownMs(err));
+      if (!quota && !isModelUnavailable(err) && !isServerSideFailure(err)) {
         console.error(`Gemini vision extraction failed (model ${model}):`, err);
         throw withModelNote(describeGeminiError(err), model, err);
       }
@@ -337,7 +364,7 @@ export async function extractDashboardReadings(
 
   if (text === null) {
     console.error(`No Gemini model answered (tried ${models.join(', ')}):`, lastError);
-    if (isServerSideFailure(lastError)) {
+    if (isQuotaError(lastError) || isServerSideFailure(lastError)) {
       throw withModelNote(describeGeminiError(lastError), lastModel, lastError);
     }
     throw new ExtractionError(

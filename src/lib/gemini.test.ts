@@ -3,6 +3,7 @@ import {
   DEFAULT_GEMINI_MODELS,
   describeGeminiError,
   extractDashboardReadings,
+  quotaCooldownMs,
   getGeminiModelName,
   getGeminiModelNames,
   isModelUnavailable,
@@ -135,14 +136,36 @@ describe('extractDashboardReadings model fallback', () => {
     expect(configs).toEqual([{ thinkingLevel: 'LOW' }, undefined]);
   });
 
-  it('does not try other models for a quota error', async () => {
+  it('moves to the next model on a quota error, and skips the limited one next time', async () => {
+    const calls: string[] = [];
+    setGeminiGenerateForTests(async (model) => {
+      calls.push(model);
+      if (model === DEFAULT_GEMINI_MODELS[0]) {
+        throw Object.assign(new Error('Resource exhausted. "retryDelay": "30s"'), { status: 429 });
+      }
+      return reading;
+    });
+    await extractDashboardReadings('aGk=');
+    expect(calls).toEqual([DEFAULT_GEMINI_MODELS[0], DEFAULT_GEMINI_MODELS[1]]);
+    calls.length = 0;
+    await extractDashboardReadings('aGk=');
+    expect(calls).toEqual([DEFAULT_GEMINI_MODELS[1]]);
+  });
+
+  it('says quota when every model is rate limited', async () => {
     const calls: string[] = [];
     setGeminiGenerateForTests(async (model) => {
       calls.push(model);
       throw Object.assign(new Error('Resource exhausted'), { status: 429 });
     });
-    await expect(extractDashboardReadings('aGk=')).rejects.toThrow(/quota/);
-    expect(calls).toHaveLength(1);
+    await expect(extractDashboardReadings('aGk=')).rejects.toThrow(/quota.*error 429/);
+    expect(calls).toEqual(DEFAULT_GEMINI_MODELS);
+  });
+
+  it('reads how long to wait after a 429', () => {
+    expect(quotaCooldownMs(new Error('"retryDelay": "12s"'))).toBe(12_000);
+    expect(quotaCooldownMs(new Error('Quota exceeded for GenerateRequestsPerDayPerProject'))).toBe(3_600_000);
+    expect(quotaCooldownMs(new Error('Resource exhausted'))).toBe(60_000);
   });
 
   it('says so when no model is available', async () => {
