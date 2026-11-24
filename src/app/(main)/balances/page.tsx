@@ -29,6 +29,7 @@ export default function BalancesPage() {
   const [confirmSettleId, setConfirmSettleId] = useState<string | null>(null);
   const [expandedFriendUid, setExpandedFriendUid] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [settleError, setSettleError] = useState<string | null>(null);
 
   const fetchBalancesList = async (): Promise<boolean> => {
     try {
@@ -44,9 +45,11 @@ export default function BalancesPage() {
     }
   };
 
-  const handleSettle = async (balanceId: string) => {
+  /** Returns true when the balance was settled. */
+  const handleSettle = async (balanceId: string): Promise<boolean> => {
     setSettlingId(balanceId);
     setFeedback(null);
+    setSettleError(null);
     try {
       const res = await fetch('/api/balances', {
         method: 'POST',
@@ -60,12 +63,12 @@ export default function BalancesPage() {
       if (await fetchBalancesList()) {
         setFeedback({ type: 'success', message: 'Balance marked as settled.' });
       }
+      return true;
     } catch (error: unknown) {
       console.error('Error settling balance:', error);
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Could not update this balance.',
-      });
+      // Shown inside the confirm panel, which stays open so they can retry.
+      setSettleError(error instanceof Error ? error.message : 'Could not update this balance.');
+      return false;
     } finally {
       setSettlingId(null);
     }
@@ -142,14 +145,14 @@ export default function BalancesPage() {
             Owed to you
           </span>
           <p className="text-2xl font-black text-ink">{formatCurrency(totalOwedToYou)}</p>
-          <p className="text-[10px] text-muted">From shared fuel bills</p>
+          <p className="text-[11px] text-muted">From shared fuel bills</p>
         </div>
         <div className="rounded-3xl bg-warning-soft border border-warning-line p-4 space-y-1">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-warning">
             You owe
           </span>
           <p className="text-2xl font-black text-ink">{formatCurrency(totalYouOwe)}</p>
-          <p className="text-[10px] text-warning">To friends</p>
+          <p className="text-[11px] text-warning">To friends</p>
         </div>
       </div>
 
@@ -193,17 +196,19 @@ export default function BalancesPage() {
                         </div>
                       )}
                       <div>
-                        <p className="text-sm font-bold text-ink">{bal.friendName}</p>
-                        {bal.isGuest && (
-                          <p className="text-[10px] text-muted">Guest · tracked by name</p>
-                        )}
-                        <p className={cn('text-xs font-semibold text-muted')}>
-                          {isOwed ? `${bal.friendName} owes you` : `You owe ${bal.friendName}`}
+                        <p className="flex items-center gap-1.5 text-sm font-bold text-ink">
+                          {bal.friendName}
+                          {bal.isGuest && (
+                            <span className="rounded-full bg-surface-soft px-1.5 py-0.5 text-[11px] font-medium text-muted">
+                              Guest
+                            </span>
+                          )}
                         </p>
+                        <p className="text-xs text-muted">{isOwed ? 'Owes you' : 'You owe'}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={cn('text-xl font-black text-ink')}>
+                      <p className={cn('text-xl font-black', isOwed ? 'text-primary' : 'text-warning')}>
                         {formatCurrency(absAmount)}
                       </p>
                     </div>
@@ -222,10 +227,18 @@ export default function BalancesPage() {
                               ? `Mark ${formatCurrency(absAmount)} from ${bal.friendName} as received?`
                               : `Mark your ${formatCurrency(absAmount)} to ${bal.friendName} as paid?`}
                           </p>
+                          {settleError && (
+                            <p role="alert" className="text-xs text-danger">
+                              {settleError}
+                            </p>
+                          )}
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               type="button"
-                              onClick={() => setConfirmSettleId(null)}
+                              onClick={() => {
+                                setConfirmSettleId(null);
+                                setSettleError(null);
+                              }}
                               disabled={settling}
                               className={cn(BTN.secondary, BTN_SIZE.md, 'w-full')}
                             >
@@ -234,8 +247,7 @@ export default function BalancesPage() {
                             <button
                               type="button"
                               onClick={async () => {
-                                await handleSettle(bal.odataId);
-                                setConfirmSettleId(null);
+                                if (await handleSettle(bal.odataId)) setConfirmSettleId(null);
                               }}
                               disabled={settling}
                               className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
@@ -256,7 +268,11 @@ export default function BalancesPage() {
                             aria-expanded={expanded}
                             className={cn(BTN.secondary, BTN_SIZE.md, 'w-full')}
                           >
-                            {expanded ? 'Hide split' : `View split${tripCount ? ` (${tripCount})` : ''}`}
+                            {expanded
+                              ? 'Hide trips'
+                              : tripCount === 1
+                                ? '1 trip'
+                                : `${tripCount} trips`}
                             <ChevronDownIcon
                               size={16}
                               className={cn('transition-transform', expanded && 'rotate-180')}
@@ -265,8 +281,11 @@ export default function BalancesPage() {
                           {canSettle && (
                             <button
                               type="button"
-                              onClick={() => setConfirmSettleId(bal.odataId)}
-                              className={cn(BTN.primary, BTN_SIZE.md, 'w-full')}
+                              onClick={() => {
+                                setConfirmSettleId(bal.odataId);
+                                setSettleError(null);
+                              }}
+                              className={cn(BTN.soft, BTN_SIZE.md, 'w-full')}
                             >
                               <CheckIcon size={16} />
                               Mark settled
@@ -296,8 +315,8 @@ export default function BalancesPage() {
                               <p className="text-xs font-semibold text-ink">
                                 {trip.name || `${trip.distanceKm} km trip`}
                               </p>
-                              <p className="text-[10px] text-muted">
-                                {friendOwesYou ? 'Friend share' : 'Your share'} ·{' '}
+                              <p className="text-[11px] text-muted">
+                                {friendOwesYou ? 'Their share' : 'Your share'} ·{' '}
                                 {formatCurrency(trip.totalCost)} total
                               </p>
                             </div>
@@ -307,8 +326,8 @@ export default function BalancesPage() {
                           </div>
                         ))
                       )}
-                      <p className="pt-1 text-[10px] text-muted">
-                        Net {formatCurrency(absAmount)} · opposite trip directions cancel automatically.
+                      <p className="pt-1 text-[11px] text-muted">
+                        Net {formatCurrency(absAmount)} after trips paid by each of you.
                       </p>
                     </div>
                   )}

@@ -122,7 +122,7 @@ export default function CameraCapture({
             <>
               <div className="flex items-center gap-3 px-2" aria-hidden="true">
                 <span className="h-px flex-1 bg-line" />
-                <span className="text-[11px] font-medium uppercase tracking-wider text-subtle">or</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted">or</span>
                 <span className="h-px flex-1 bg-line" />
               </div>
               <button
@@ -137,7 +137,7 @@ export default function CameraCapture({
                   <span className="block text-sm font-semibold text-ink">Enter manually</span>
                   <span className="block text-xs text-muted">Type the distance and mileage yourself</span>
                 </span>
-                <ChevronRightIcon size={18} className="shrink-0 text-subtle" />
+                <ChevronRightIcon size={18} className="shrink-0 text-muted" />
               </button>
             </>
           )}
