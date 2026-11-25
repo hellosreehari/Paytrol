@@ -6,6 +6,13 @@ import InstallPrompt from '@/components/InstallPrompt';
 
 const inter = Inter({ subsets: ['latin'] });
 
+// iPhone screens in points (width, height, pixel ratio), with a matching
+// image in public/splash. Newest first.
+const SPLASH_SCREENS: [number, number, number][] = [
+  [440, 956, 3], [402, 874, 3], [420, 912, 3], [430, 932, 3], [393, 852, 3], [428, 926, 3],
+  [390, 844, 3], [375, 812, 3], [414, 896, 3], [414, 896, 2], [375, 667, 2], [414, 736, 3],
+];
+
 export const metadata: Metadata = {
   title: 'Paytrol — AI Trip Fuel Cost Splitter',
   description: 'Snap your dashboard, extract trip distance and mileage with AI, and split the bill with friends.',
@@ -14,6 +21,12 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Paytrol',
+    // Launch screens for the installed app on iPhone. Without them iOS shows
+    // a blank black screen while the app starts.
+    startupImage: SPLASH_SCREENS.map(([width, height, ratio]) => ({
+      url: `/splash/iphone-${width * ratio}x${height * ratio}.png`,
+      media: `(device-width: ${width}px) and (device-height: ${height}px) and (-webkit-device-pixel-ratio: ${ratio}) and (orientation: portrait)`,
+    })),
   },
 };
 
