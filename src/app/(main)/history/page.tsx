@@ -5,8 +5,8 @@ import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 import { invalidate, prefetchData, RESOURCES, useCachedData } from '@/lib/data-cache';
-import { cleanTripName, collectTripTags, tripHasTag } from '@/lib/trip-labels';
-import TripLabelsFields from '@/components/TripLabelsFields';
+import { cleanTripName, rankTripNames, sameTripName, tripDisplayName } from '@/lib/trip-labels';
+import TripNameField from '@/components/TripNameField';
 import { CheckIcon, CloseIcon, PencilIcon, TrashIcon, TripsIcon, UsersIcon } from '@/components/icons';
 import PersonToggle from '@/components/PersonToggle';
 import QuickAddGuest from '@/components/QuickAddGuest';
@@ -43,8 +43,7 @@ export default function HistoryPage() {
   const [quickGuestName, setQuickGuestName] = useState('');
   const [addingGuest, setAddingGuest] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
-  const [tagsDraft, setTagsDraft] = useState<string[]>([]);
-  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [nameFilter, setNameFilter] = useState<string | null>(null);
 
   // Guests linked to someone who is already a friend are shown once, as the friend.
   const friendUids = new Set(
@@ -54,19 +53,29 @@ export default function HistoryPage() {
   );
   const availableGuests = guestContacts.filter((guest) => !guest.linkedUid || !friendUids.has(guest.linkedUid));
 
-  const allTags = collectTripTags(trips);
-  const activeTagFilter = tagFilter && allTags.some((tag) => tag.toLocaleLowerCase() === tagFilter.toLocaleLowerCase())
-    ? tagFilter
-    : null;
-  const visibleTrips = activeTagFilter ? trips.filter((trip) => tripHasTag(trip, activeTagFilter)) : trips;
+  // Names you gave your own trips, offered under the name field when editing.
+  const myNames = rankTripNames(trips.filter((trip) => trip.creatorUid === currentUserId));
+  // Filter chips for names that cover more than one trip, so a chip always narrows the list.
+  const nameCounts = new Map<string, number>();
+  for (const trip of trips) {
+    const key = tripDisplayName(trip).toLocaleLowerCase();
+    if (key) nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
+  }
+  const filterNames = rankTripNames(trips.map((trip) => ({ name: tripDisplayName(trip) })))
+    .filter((name) => (nameCounts.get(name.toLocaleLowerCase()) ?? 0) > 1 && (nameCounts.get(name.toLocaleLowerCase()) ?? 0) < trips.length)
+    .slice(0, 8);
+  const activeNameFilter = nameFilter && filterNames.some((name) => sameTripName(name, nameFilter)) ? nameFilter : null;
+  const visibleTrips = activeNameFilter
+    ? trips.filter((trip) => sameTripName(tripDisplayName(trip), activeNameFilter))
+    : trips;
 
   const openEdit = (trip: Trip) => {
     setEditingTrip(trip);
     setDistanceDraft(String(trip.distanceKm));
     setMileageDraft(String(trip.avgMileageKmpl));
     setFuelPriceDraft(String(trip.fuelPricePerLiter));
-    setNameDraft(trip.name ?? '');
-    setTagsDraft(trip.tags ?? []);
+    // Older trips may only have tags: they become the name when saved.
+    setNameDraft(tripDisplayName(trip));
     setEditError(null);
     setIncludeCreatorDraft(trip.participants.some((participant) => participant.uid === currentUserId));
     setSelectedParticipantIds(
@@ -220,7 +229,6 @@ export default function HistoryPage() {
           fuelPricePerLiter: Number(fuelPriceDraft),
           participants,
           name: cleanTripName(nameDraft),
-          tags: tagsDraft,
         }),
       });
       const data = await res.json();
@@ -257,31 +265,21 @@ export default function HistoryPage() {
         </p>
       )}
 
-      {allTags.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1" role="group" aria-label="Filter trips by tag">
-          <button
-            type="button"
-            onClick={() => setTagFilter(null)}
-            aria-pressed={!activeTagFilter}
-            className={!activeTagFilter
-              ? 'shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary'
-              : 'shrink-0 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted'}
-          >
-            All
-          </button>
-          {allTags.map((tag) => {
-            const selected = activeTagFilter?.toLocaleLowerCase() === tag.toLocaleLowerCase();
+      {filterNames.length > 0 && (
+        <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="Show trips by name">
+          {[null, ...filterNames].map((name) => {
+            const selected = name === null ? !activeNameFilter : Boolean(activeNameFilter && sameTripName(name, activeNameFilter));
             return (
               <button
                 type="button"
-                key={tag}
-                onClick={() => setTagFilter(selected ? null : tag)}
+                key={name ?? 'all'}
+                onClick={() => setNameFilter(name === null || selected ? null : name)}
                 aria-pressed={selected}
                 className={selected
-                  ? 'shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary'
-                  : 'shrink-0 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted'}
+                  ? 'h-8 max-w-[14rem] shrink-0 truncate rounded-full bg-primary px-3 text-xs font-semibold text-on-primary'
+                  : 'h-8 max-w-[14rem] shrink-0 truncate rounded-full border border-line bg-surface px-3 text-xs font-medium text-muted hover:text-ink'}
               >
-                #{tag}
+                {name ?? 'All'}
               </button>
             );
           })}
@@ -331,7 +329,7 @@ export default function HistoryPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <h3 className="truncate text-sm font-bold text-ink">
-                        {trip.name || `${trip.distanceKm} km`}
+                        {tripDisplayName(trip) || `${trip.distanceKm} km`}
                       </h3>
                       <span className="shrink-0 text-base font-black text-ink tabular-nums">
                         {formatCurrency(trip.totalCost)}
@@ -340,7 +338,7 @@ export default function HistoryPage() {
                     <div className="flex items-baseline justify-between gap-2 text-xs text-muted">
                       <span className="truncate">
                         {formatRelativeTime(trip.createdAt)}
-                        {trip.name ? ` · ${trip.distanceKm} km` : ` · ${trip.avgMileageKmpl} km/L`}
+                        {tripDisplayName(trip) ? ` · ${trip.distanceKm} km` : ` · ${trip.avgMileageKmpl} km/L`}
                       </span>
                       {myShare !== undefined && riders.length > 1 && (
                         <span className="shrink-0">
@@ -364,7 +362,7 @@ export default function HistoryPage() {
                       type="button"
                       onClick={() => openEdit(trip)}
                       className="-my-2 inline-flex h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted hover:text-ink"
-                      aria-label={`Edit trip ${trip.name || `for ${trip.distanceKm} km`}`}
+                      aria-label={`Edit trip ${tripDisplayName(trip) || `for ${trip.distanceKm} km`}`}
                     >
                       <PencilIcon size={14} />
                       Edit
@@ -375,20 +373,6 @@ export default function HistoryPage() {
                   <p className="mt-1 text-[11px] text-muted">Logged by {trip.creatorName}</p>
                 )}
 
-                {trip.tags && trip.tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {trip.tags.map((tag) => (
-                      <button
-                        type="button"
-                        key={tag}
-                        onClick={() => setTagFilter(tag)}
-                        className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary"
-                      >
-                        #{tag}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </article>
             );
           })}
@@ -455,6 +439,8 @@ export default function HistoryPage() {
               </p>
             )}
 
+            <TripNameField value={nameDraft} onChange={setNameDraft} names={myNames} className="mb-4 border-b border-line pb-4" />
+
             <div className="space-y-3">
               <label className="block space-y-1.5">
                 <span className="text-xs font-medium text-muted">Distance driven (km)</span>
@@ -494,15 +480,6 @@ export default function HistoryPage() {
               </label>
             </div>
 
-            <div className="mt-4 border-t border-line pt-4">
-              <TripLabelsFields
-                name={nameDraft}
-                onNameChange={setNameDraft}
-                tags={tagsDraft}
-                onTagsChange={setTagsDraft}
-                suggestions={allTags}
-              />
-            </div>
 
             <div className="mt-4 space-y-3 border-t border-line pt-4">
               <div className="flex items-center justify-between">
