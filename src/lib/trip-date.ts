@@ -6,9 +6,7 @@
 // time of day.
 
 const DAY_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
+const DAY = 24 * 60 * 60 * 1000;
 
 interface Dated {
   tripDate?: string;
@@ -62,21 +60,14 @@ function plural(count: number, unit: string): string {
 }
 
 /**
- * A relative time that gets coarser with age: Just now, 40 min ago,
- * 3 hours ago, Yesterday, 3 days ago, 2 weeks ago, 2 months ago, Nov 2025.
- * A day without a time reads Today, Yesterday, 3 days ago and so on.
+ * How long ago, by calendar day: Today, Yesterday, 3 days ago, 2 weeks ago,
+ * 2 months ago, then Nov 2025. Trips are recorded by day, so no hours.
  */
 export function formatTripWhen(value: string, now: Date = new Date()): string {
   const date = parseTripDate(value);
   if (!Number.isFinite(date.getTime())) return '';
   const days = Math.round((startOfDay(now) - startOfDay(date)) / DAY);
 
-  if (!isDayOnly(value) && days <= 0) {
-    const diff = Math.max(0, now.getTime() - date.getTime());
-    if (diff < MINUTE) return 'Just now';
-    if (diff < HOUR) return `${Math.floor(diff / MINUTE)} min ago`;
-    return plural(Math.floor(diff / HOUR), 'hour');
-  }
   if (days <= 0) return 'Today';
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days} days ago`;
@@ -85,15 +76,13 @@ export function formatTripWhen(value: string, now: Date = new Date()): string {
   return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 }
 
-/** The exact date (and time, when known), e.g. "Mon, 23 Nov · 8:15 pm". The year shows when it isn't this year. */
+/** The exact day, e.g. "Mon, 23 Nov". The year shows when it isn't this year. */
 export function formatTripWhenExact(value: string, now: Date = new Date()): string {
   const date = parseTripDate(value);
   if (!Number.isFinite(date.getTime())) return '';
   const part = (options: Intl.DateTimeFormatOptions) => date.toLocaleDateString('en-IN', options);
   const year = date.getFullYear() === now.getFullYear() ? '' : ` ${date.getFullYear()}`;
-  const day = `${part({ weekday: 'short' })}, ${date.getDate()} ${part({ month: 'short' })}${year}`;
-  if (isDayOnly(value)) return day;
-  return `${day} · ${date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`;
+  return `${part({ weekday: 'short' })}, ${date.getDate()} ${part({ month: 'short' })}${year}`;
 }
 
 /**

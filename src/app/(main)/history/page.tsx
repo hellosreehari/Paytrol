@@ -58,7 +58,7 @@ export default function HistoryPage() {
   // so an untouched date isn't sent back.
   const [whenDraft, setWhenDraft] = useState('');
   const [whenStart, setWhenStart] = useState('');
-  // Cards whose date is showing the exact date and time.
+  // Cards whose date is showing the exact day.
   const [exactDates, setExactDates] = useState<Set<string>>(new Set());
   const toggleExact = (id: string) =>
     setExactDates((current) => {
@@ -375,8 +375,7 @@ export default function HistoryPage() {
                         >
                           {exactDates.has(trip.id) ? formatTripWhenExact(tripWhen(trip)) : formatTripWhen(tripWhen(trip))}
                         </button>
-                        {/* The exact date is long: it takes the whole line while shown. */}
-                        {!exactDates.has(trip.id) && (tripDisplayName(trip) ? ` · ${trip.distanceKm} km` : ` · ${trip.avgMileageKmpl} km/L`)}
+                        {tripDisplayName(trip) ? ` · ${trip.distanceKm} km` : ` · ${trip.avgMileageKmpl} km/L`}
                       </span>
                       {myShare !== undefined && riders.length > 1 && (
                         <span className="shrink-0">
