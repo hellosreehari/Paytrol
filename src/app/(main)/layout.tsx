@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';
 import { prefetchData, RESOURCES } from '@/lib/data-cache';
@@ -9,6 +9,7 @@ import { prefetchData, RESOURCES } from '@/lib/data-cache';
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, needsSetup } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isLoading) {
@@ -35,13 +36,29 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [ready]);
 
+  // The first paint, before the app has read who is signed in on this device,
+  // is already the app's frame with placeholders rather than a spinner on an
+  // empty page, so a launch looks instant. It is replaced a moment later.
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-canvas">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-muted">Loading Paytrol...</p>
-        </div>
+      <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between">
+        <main className="flex-1 max-w-md w-full mx-auto px-5 pt-5 pb-28" aria-busy="true" aria-label="Loading Paytrol">
+          <div className="space-y-5">
+            <div className="flex items-center justify-between pt-1">
+              <div className="space-y-2">
+                <div className="h-5 w-32 rounded-md bg-surface-sunken" />
+                <div className="h-3 w-24 rounded-md bg-surface-sunken" />
+              </div>
+              <div className="h-10 w-10 rounded-full bg-surface-sunken" />
+            </div>
+            {pathname === '/home' && <div className="aspect-[4/3.4] w-full rounded-3xl bg-[#0b110e]" />}
+            <div className="space-y-2.5">
+              <div className="h-20 rounded-2xl bg-surface" />
+              <div className="h-20 rounded-2xl bg-surface" />
+            </div>
+          </div>
+        </main>
+        <BottomNav />
       </div>
     );
   }
