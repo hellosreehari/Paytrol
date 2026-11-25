@@ -8,11 +8,9 @@ const MIN = 60_000;
 const HOUR = 60 * MIN;
 
 describe('formatTripWhen', () => {
-  it('counts minutes and hours on the same day', () => {
-    expect(formatTripWhen(ago(20_000), now)).toBe('Just now');
-    expect(formatTripWhen(ago(40 * MIN), now)).toBe('40 min ago');
-    expect(formatTripWhen(ago(HOUR), now)).toBe('1 hour ago');
-    expect(formatTripWhen(ago(3 * HOUR), now)).toBe('3 hours ago');
+  it('says Today for anything earlier today, with no hours', () => {
+    expect(formatTripWhen(ago(20_000), now)).toBe('Today');
+    expect(formatTripWhen(ago(3 * HOUR), now)).toBe('Today');
   });
 
   it('uses calendar days after that', () => {
@@ -36,9 +34,9 @@ describe('formatTripWhen', () => {
 });
 
 describe('formatTripWhenExact', () => {
-  it('adds the time only when it is known', () => {
+  it('shows the day only, with the year when it is not this year', () => {
     expect(formatTripWhenExact('2026-11-23', now)).toBe('Mon, 23 Nov');
-    expect(formatTripWhenExact(new Date(2026, 10, 23, 20, 15).toISOString(), now)).toMatch(/^Mon, 23 Nov · 8:15 pm$/i);
+    expect(formatTripWhenExact(new Date(2026, 10, 23, 20, 15).toISOString(), now)).toBe('Mon, 23 Nov');
     expect(formatTripWhenExact('2025-10-02', now)).toBe('Thu, 2 Oct 2025');
   });
 });
