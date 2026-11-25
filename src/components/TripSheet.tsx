@@ -13,6 +13,7 @@ import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 import PersonToggle from '@/components/PersonToggle';
 import QuickAddGuest from '@/components/QuickAddGuest';
 import TripNameField from '@/components/TripNameField';
+import TripWhenField from '@/components/TripWhenField';
 import { FuelPumpIcon, SearchIcon } from '@/components/icons';
 
 /** Show a search box once there are more people than this. */
@@ -94,6 +95,8 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
   const visible = ordered.filter((rider) => matchesSearch(rider.name, query) || (rider.kind === 'me' && !query.trim()));
 
   const [tripName, setTripName] = useState('');
+  // '' = today; otherwise the earlier day the trip happened.
+  const [tripDate, setTripDate] = useState('');
   // Names you typed on your own earlier trips, most used first.
   const nameSuggestions = useMemo(
     () => rankTripNames(trips.filter((trip) => trip.creatorUid === meUid)),
@@ -270,6 +273,7 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
           splitMode: 'equal',
           participants: tickedInOrder.map(participantFor),
           name: cleanTripName(tripName),
+          ...(tripDate ? { tripDate } : {}),
         }),
       });
       const data = await res.json().catch(() => null);
@@ -414,6 +418,7 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 pb-4">
           <TripNameField value={tripName} onChange={setTripName} names={nameSuggestions} />
+          <TripWhenField value={tripDate} onChange={setTripDate} />
 
           {photoOpen && draft.previewUrl && (
             <button type="button" onClick={() => setPhotoOpen(false)} className="block w-full overflow-hidden rounded-2xl bg-black">

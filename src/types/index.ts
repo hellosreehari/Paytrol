@@ -41,6 +41,8 @@ export interface Trip {
   id: string;
   name?: string;           // optional label, e.g. "Goa weekend"
   tags?: string[];         // optional tags, e.g. ["office", "commute"]
+  /** The day the trip happened ("YYYY-MM-DD"), when that wasn't the day it was logged. */
+  tripDate?: string;
   creatorUid: string;
   creatorName: string;
   photoURL: string;
