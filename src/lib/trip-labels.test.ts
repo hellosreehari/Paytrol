@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanTripName,
-  cleanTripTags,
-  collectTripTags,
+  rankTripNames,
+  sameTripName,
+  suggestTripNames,
   TRIP_NAME_MAX_LENGTH,
-  TRIP_TAGS_MAX,
-  tripHasTag,
+  tripDisplayName,
 } from '@/lib/trip-labels';
 
 describe('cleanTripName', () => {
@@ -24,36 +24,59 @@ describe('cleanTripName', () => {
   });
 });
 
-describe('cleanTripTags', () => {
-  it('accepts a comma-separated string', () => {
-    expect(cleanTripTags('office, #commute ,  ')).toEqual(['office', 'commute']);
+describe('tripDisplayName', () => {
+  it('uses the name when there is one', () => {
+    expect(tripDisplayName({ name: 'Goa', tags: ['weekend'] })).toBe('Goa');
   });
 
-  it('removes duplicates case-insensitively and keeps the first spelling', () => {
-    expect(cleanTripTags(['Office', 'office', 'OFFICE', 'Goa'])).toEqual(['Office', 'Goa']);
+  it('shows the old tags of a trip without a name', () => {
+    expect(tripDisplayName({ tags: ['weekend', 'goa'] })).toBe('weekend · goa');
   });
 
-  it('drops non-string entries and caps the count', () => {
-    const many = Array.from({ length: 20 }, (_, i) => `tag${i}`);
-    expect(cleanTripTags([1, null, ...many])).toHaveLength(TRIP_TAGS_MAX);
-  });
-
-  it('returns an empty list for anything else', () => {
-    expect(cleanTripTags(undefined)).toEqual([]);
-    expect(cleanTripTags({ tag: 'x' })).toEqual([]);
+  it('is empty for a trip with neither', () => {
+    expect(tripDisplayName({})).toBe('');
+    expect(tripDisplayName({ tags: [] })).toBe('');
   });
 });
 
-describe('collectTripTags', () => {
-  it('orders tags by how often they are used', () => {
-    const trips = [{ tags: ['goa', 'Office'] }, { tags: ['office'] }, {}];
-    expect(collectTripTags(trips)).toEqual(['Office', 'goa']);
+describe('rankTripNames', () => {
+  it('orders names by how often they are used, ignoring case', () => {
+    const trips = [{ name: 'Gym' }, { name: 'Office run' }, { name: 'office run' }, {}, { name: 'Airport' }];
+    expect(rankTripNames(trips)).toEqual(['Office run', 'Gym', 'Airport']);
+  });
+
+  it('breaks ties by the most recent use and keeps its spelling', () => {
+    // Newest first, as the API returns trips.
+    const trips = [{ name: 'office Run' }, { name: 'Gym' }, { name: 'Office run' }, { name: 'gym' }];
+    expect(rankTripNames(trips)).toEqual(['office Run', 'Gym']);
+  });
+
+  it('ignores old tags', () => {
+    expect(rankTripNames([{ tags: ['goa'] }])).toEqual([]);
   });
 });
 
-describe('tripHasTag', () => {
-  it('matches case-insensitively', () => {
-    expect(tripHasTag({ tags: ['Office'] }, 'office')).toBe(true);
-    expect(tripHasTag({}, 'office')).toBe(false);
+describe('suggestTripNames', () => {
+  const ranked = ['Office run', 'Gym', 'Airport drop', 'Goa weekend', 'Mall', 'Office party'];
+
+  it('shows the most used names when nothing is typed', () => {
+    expect(suggestTripNames(ranked, '  ')).toEqual(ranked.slice(0, 5));
+  });
+
+  it('narrows to names with a word starting with the text', () => {
+    expect(suggestTripNames(ranked, 'of')).toEqual(['Office run', 'Office party']);
+    expect(suggestTripNames(ranked, 'DROP')).toEqual(['Airport drop']);
+    expect(suggestTripNames(ranked, 'run ')).toEqual(['Office run']);
+  });
+
+  it('leaves out a name that is already typed in full', () => {
+    expect(suggestTripNames(ranked, 'gym')).toEqual([]);
+  });
+});
+
+describe('sameTripName', () => {
+  it('ignores case and spacing', () => {
+    expect(sameTripName(' Office  run', 'office run')).toBe(true);
+    expect(sameTripName('Office', 'Office run')).toBe(false);
   });
 });

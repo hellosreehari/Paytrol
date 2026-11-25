@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
 import { useTripStore } from '@/stores/tripStore';
 import type { Trip } from '@/types';
+import { tripDisplayName } from '@/lib/trip-labels';
 import { CheckIcon, ShareIcon } from '@/components/icons';
 
 export default function ResultPage() {
@@ -27,8 +28,7 @@ export default function ResultPage() {
       return `• ${participant.displayName}: ${formatCurrency(participant.shareAmount)}${status}`;
     });
     const shareText = [
-      trip.name ? `Paytrol trip: ${trip.name}` : 'Paytrol trip breakdown',
-      ...(trip.tags && trip.tags.length > 0 ? [trip.tags.map((tag) => `#${tag}`).join(' ')] : []),
+      tripDisplayName(trip) ? `Paytrol trip: ${tripDisplayName(trip)}` : 'Paytrol trip breakdown',
       `Distance: ${trip.distanceKm} km`,
       `Avg Mileage: ${trip.avgMileageKmpl} km/L`,
       `Fuel Used: ${trip.fuelUsedLiters.toFixed(3)} L`,
@@ -105,19 +105,8 @@ export default function ResultPage() {
         )}
 
         <div className="p-5 space-y-4">
-          {(trip.name || (trip.tags && trip.tags.length > 0)) && (
-            <div className="space-y-1.5">
-              {trip.name && <h2 className="text-lg font-bold text-ink break-words">{trip.name}</h2>}
-              {trip.tags && trip.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {trip.tags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+          {tripDisplayName(trip) && (
+            <h2 className="text-lg font-bold text-ink break-words">{tripDisplayName(trip)}</h2>
           )}
           <div className="flex items-baseline justify-between border-b border-line pb-3">
             <div>

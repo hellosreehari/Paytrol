@@ -7,6 +7,7 @@ import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 import HomeScanner from '@/components/HomeScanner';
 import TripSheet, { type TripDraft } from '@/components/TripSheet';
 import type { Trip } from '@/types';
+import { tripDisplayName } from '@/lib/trip-labels';
 import { RESOURCES, useCachedData } from '@/lib/data-cache';
 import { ChevronRightIcon, FuelPumpIcon, PencilIcon } from '@/components/icons';
 
@@ -114,10 +115,10 @@ export default function HomePage() {
                   )}
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-ink truncate">
-                      {trip.name || `${trip.distanceKm} km • ${trip.avgMileageKmpl} km/L`}
+                      {tripDisplayName(trip) || `${trip.distanceKm} km • ${trip.avgMileageKmpl} km/L`}
                     </p>
                     <p className="text-xs text-muted truncate">
-                      {trip.name ? `${trip.distanceKm} km • ` : ''}
+                      {tripDisplayName(trip) ? `${trip.distanceKm} km • ` : ''}
                       {formatRelativeTime(trip.createdAt)} • {trip.fuelUsedLiters.toFixed(2)}L
                     </p>
                   </div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { Trip } from '@/types';
+import { tripDisplayName } from '@/lib/trip-labels';
 import { RESOURCES, useCachedData } from '@/lib/data-cache';
 import { CheckCircleIcon, CheckIcon, ChevronDownIcon } from '@/components/icons';
 import { BTN, BTN_SIZE } from '@/lib/ui';
@@ -323,7 +324,7 @@ export default function BalancesPage() {
                           >
                             <div>
                               <p className="text-xs font-semibold text-ink">
-                                {trip.name || `${trip.distanceKm} km trip`}
+                                {tripDisplayName(trip) || `${trip.distanceKm} km trip`}
                               </p>
                               <p className="text-[11px] text-muted">
                                 {friendOwesYou ? 'Their share' : 'Your share'} ·{' '}

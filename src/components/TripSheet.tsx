@@ -6,14 +6,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn, formatCurrency } from '@/lib/utils';
 import { computeTripCost, splitEqually } from '@/lib/money';
 import { invalidate, RESOURCES, setCachedData, useCachedData } from '@/lib/data-cache';
-import { cleanTripName, collectTripTags } from '@/lib/trip-labels';
+import { cleanTripName, rankTripNames } from '@/lib/trip-labels';
 import { buildRiders, guestKey, matchesSearch, orderRiders, riderHistory, type Rider } from '@/lib/riders';
 import type { ScanReading } from '@/lib/scan-client';
 import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 import PersonToggle from '@/components/PersonToggle';
 import QuickAddGuest from '@/components/QuickAddGuest';
-import TripLabelsFields from '@/components/TripLabelsFields';
-import { ChevronDownIcon, FuelPumpIcon, SearchIcon } from '@/components/icons';
+import TripNameField from '@/components/TripNameField';
+import { FuelPumpIcon, SearchIcon } from '@/components/icons';
 
 /** Show a search box once there are more people than this. */
 const SEARCH_AFTER = 8;
@@ -93,10 +93,12 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
   const [query, setQuery] = useState('');
   const visible = ordered.filter((rider) => matchesSearch(rider.name, query) || (rider.kind === 'me' && !query.trim()));
 
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [tripName, setTripName] = useState('');
-  const [tripTags, setTripTags] = useState<string[]>([]);
-  const tagSuggestions = useMemo(() => collectTripTags(trips), [trips]);
+  // Names you typed on your own earlier trips, most used first.
+  const nameSuggestions = useMemo(
+    () => rankTripNames(trips.filter((trip) => trip.creatorUid === meUid)),
+    [trips, meUid]
+  );
   const [guestName, setGuestName] = useState('');
   const [addingGuest, setAddingGuest] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -268,7 +270,6 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
           splitMode: 'equal',
           participants: tickedInOrder.map(participantFor),
           name: cleanTripName(tripName),
-          tags: tripTags,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -412,6 +413,8 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 pb-4">
+          <TripNameField value={tripName} onChange={setTripName} names={nameSuggestions} />
+
           {photoOpen && draft.previewUrl && (
             <button type="button" onClick={() => setPhotoOpen(false)} className="block w-full overflow-hidden rounded-2xl bg-black">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -492,28 +495,6 @@ export default function TripSheet({ draft, onClose }: { draft: TripDraft; onClos
             <QuickAddGuest value={guestName} onChange={setGuestName} onAdd={handleAddGuest} adding={addingGuest} />
           </section>
 
-          <section>
-            <button
-              type="button"
-              onClick={() => setDetailsOpen((open) => !open)}
-              aria-expanded={detailsOpen}
-              className="flex h-10 w-full items-center justify-between text-xs font-semibold text-ink-soft"
-            >
-              <span>{tripName || tripTags.length ? 'Name and tags' : 'Add a name or tags'}</span>
-              <ChevronDownIcon size={16} className={cn('transition-transform', detailsOpen && 'rotate-180')} />
-            </button>
-            {detailsOpen && (
-              <div className="rounded-2xl border border-line p-4">
-                <TripLabelsFields
-                  name={tripName}
-                  onNameChange={setTripName}
-                  tags={tripTags}
-                  onTagsChange={setTripTags}
-                  suggestions={tagSuggestions}
-                />
-              </div>
-            )}
-          </section>
         </div>
 
         <div className="shrink-0 space-y-2 border-t border-line px-5 pb-safe pt-3">
