@@ -42,6 +42,7 @@ const coolingUntil = new Map<string, number>();
 export function resetGeminiModelCache(): void {
   workingModel = null;
   coolingUntil.clear();
+  rejectsThinking.clear();
 }
 
 /** True for a rate limit or used-up quota (HTTP 429). */
@@ -88,7 +89,6 @@ const responseSchema: Schema = {
     },
     confidence_distance: CONFIDENCE,
     confidence_mileage: CONFIDENCE,
-    raw_text: { type: Type.STRING },
   },
   required: [
     'trip_distance_found',
@@ -99,7 +99,6 @@ const responseSchema: Schema = {
     'average_economy_unit',
     'confidence_distance',
     'confidence_mileage',
-    'raw_text',
   ],
 };
 
@@ -121,9 +120,7 @@ If a figure is not visible or not readable, set its *_found field to false and i
 Confidence for each figure:
 - "high": digits and unit are sharp and unambiguous.
 - "medium": readable but with glare, reflection, angle or an unclear label.
-- "low": blurred, partly hidden, or you are unsure which figure is which.
-
-raw_text: a short list of the labelled figures you can see, e.g. "Trip A 123.4 km; Avg 15.2 km/l; ODO 45210 km".`;
+- "low": blurred, partly hidden, or you are unsure which figure is which.`;
 
 export interface DashboardExtraction {
   distance_km: number;
@@ -247,6 +244,9 @@ export function isModelUnavailable(err: unknown): boolean {
   return /model.*(not found|is not supported|no longer available|not available|deprecated)|(not found|unsupported).*model/i.test(message);
 }
 
+// Models that answered "thinking not supported" to the thinking setting.
+const rejectsThinking = new Set<string>();
+
 function configFor(model: string, withThinking: boolean): GenerateContentConfig {
   const gemini3 = /^gemini-[3-9]/.test(model) || model.includes('latest');
   const config: GenerateContentConfig = {
@@ -256,11 +256,13 @@ function configFor(model: string, withThinking: boolean): GenerateContentConfig 
     responseSchema,
     abortSignal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   };
-  // Reading two printed numbers needs little reasoning: low thinking keeps
-  // Gemini 3 models fast. Older models don't accept thinkingLevel.
-  // Flash-Lite thinks very little by default, so it is left as it is.
-  if (withThinking && /^gemini-[3-9]/.test(model) && !model.includes('lite')) {
-    config.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+  // Reading two printed numbers needs almost no reasoning, and thinking is
+  // most of a Gemini 3 Flash response time, so keep it to the minimum.
+  // Flash-Lite already thinks minimally by default, so it is left as it is.
+  // Older models don't accept thinkingLevel; a model that rejects it is
+  // remembered and asked without it from then on, saving a round trip.
+  if (withThinking && /^gemini-[3-9]/.test(model) && !model.includes('lite') && !rejectsThinking.has(model)) {
+    config.thinkingConfig = { thinkingLevel: ThinkingLevel.MINIMAL };
   }
   return config;
 }
@@ -315,6 +317,7 @@ async function generateWithRetry(generate: GenerateFn, model: string, parts: unk
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const rejectedThinking = (err as { status?: number })?.status === 400 && /thinking/i.test(message);
+    if (rejectedThinking) rejectsThinking.add(model);
     if (!rejectedThinking && !isServerSideFailure(err)) throw err;
   }
   try {
@@ -355,8 +358,10 @@ export async function extractDashboardReadings(
   for (const model of models) {
     lastModel = model;
     try {
+      const started = Date.now();
       text = await generateWithRetry(generate, model, parts);
       workingModel = model;
+      console.info(`Gemini ${model} read the photo in ${Date.now() - started} ms`);
       break;
     } catch (err: unknown) {
       lastError = err;
