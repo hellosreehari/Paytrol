@@ -305,7 +305,12 @@ export default function HistoryPage() {
             const riders = trip.participants ?? [];
             const mine = trip.creatorUid === currentUserId;
             const myShare = riders.find((p) => p.uid === currentUserId)?.shareAmount;
-            const shares = new Set(riders.map((p) => (p.shareAmount ?? 0).toFixed(2)));
+            // An equal split can differ by a paisa between riders (₹273.33 is
+            // ₹136.67 + ₹136.66), so treat shares within a paisa as equal and
+            // show the larger one.
+            const shareAmounts = riders.map((p) => p.shareAmount ?? 0);
+            const eachShare = shareAmounts.length > 0 ? Math.max(...shareAmounts) : 0;
+            const sharesEqual = shareAmounts.length > 0 && eachShare - Math.min(...shareAmounts) < 0.015;
             const firstNames = riders.map((p) => (p.uid === currentUserId ? 'You' : p.displayName.split(' ')[0]));
             return (
               <article key={trip.id} className="rounded-2xl border border-line bg-surface p-3.5 shadow-sm">
@@ -353,8 +358,8 @@ export default function HistoryPage() {
                   <p className="min-w-0 flex-1 truncate text-xs text-ink-soft">
                     <UsersIcon size={14} className="mr-1 -mt-0.5 text-muted" />
                     {firstNames.join(', ')}
-                    {riders.length > 1 && shares.size === 1 && (
-                      <span className="text-muted"> · {formatCurrency(riders[0].shareAmount ?? 0)} each</span>
+                    {riders.length > 1 && sharesEqual && (
+                      <span className="text-muted"> · {formatCurrency(eachShare)} each</span>
                     )}
                   </p>
                   {mine && (
