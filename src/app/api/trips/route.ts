@@ -8,6 +8,7 @@ import { deletePhoto, getPhotoReadUrl, normalizeStoredPhotoUrl } from '@/lib/blo
 import { computeTripCost, splitByPercentages, splitEqually } from '@/lib/money';
 import { adjustBalance, getAcceptedFriendUids, type LedgerParty } from '@/lib/ledger';
 import { cleanTripName } from '@/lib/trip-labels';
+import { cleanTripDate } from '@/lib/trip-date';
 
 const PHOTO_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -276,6 +277,7 @@ export async function POST(req: NextRequest) {
       splitMode?: 'equal' | 'custom';
       participants?: TripParticipant[];
       name?: unknown;
+      tripDate?: unknown;
     };
 
     const distanceKm = Number(body.distanceKm);
@@ -299,9 +301,13 @@ export async function POST(req: NextRequest) {
 
     const owner = await getCreatorParty(uid, session?.user || {});
     const name = cleanTripName(body.name);
+    // Only an earlier day is stored; a trip from today is dated by createdAt.
+    const tripDate = cleanTripDate(body.tripDate);
+    if (body.tripDate && !tripDate) return jsonError('That trip date is not valid.', 400);
     const trip: Trip = {
       id: generateId(),
       ...(name ? { name } : {}),
+      ...(tripDate ? { tripDate } : {}),
       creatorUid: uid,
       creatorName: owner.name,
       photoURL,
@@ -356,6 +362,7 @@ export async function PATCH(req: NextRequest) {
       fuelPricePerLiter?: number;
       participants?: TripParticipant[];
       name?: unknown;
+      tripDate?: unknown;
     };
     if (!body.tripId) {
       return jsonError('Trip ID is required.', 400);
@@ -404,6 +411,13 @@ export async function PATCH(req: NextRequest) {
       if (name) trip.name = name;
       else delete trip.name;
       delete trip.tags;
+    }
+    // The trip date only changes when the request includes it; '' clears it.
+    if (body.tripDate !== undefined) {
+      const tripDate = cleanTripDate(body.tripDate);
+      if (tripDate) trip.tripDate = tripDate;
+      else if (body.tripDate === '' || body.tripDate === null) delete trip.tripDate;
+      else return jsonError('That trip date is not valid.', 400);
     }
 
     const updatedTrip = await updateDocument('trips', trip);

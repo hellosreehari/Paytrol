@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   BadgeCheck,
+  CalendarDays,
   Camera,
   Check,
   ChevronDown,
@@ -65,6 +66,7 @@ export const TrashIcon = make(Trash2, 'TrashIcon');
 export const UserPlusIcon = make(UserPlus, 'UserPlusIcon');
 export const LinkIcon = make(LucideLink, 'LinkIcon');
 export const CameraIcon = make(Camera, 'CameraIcon');
+export const CalendarIcon = make(CalendarDays, 'CalendarIcon');
 export const ImageIcon = make(LucideImage, 'ImageIcon');
 export const FlashIcon = make(Zap, 'FlashIcon');
 export const SearchIcon = make(Search, 'SearchIcon');

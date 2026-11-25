@@ -1,18 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { formatCurrency, formatRelativeTime } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import type { Friendship, GuestContact, Trip, TripParticipant } from '@/types';
 import { invalidate, prefetchData, RESOURCES, useCachedData } from '@/lib/data-cache';
 import { cleanTripName, rankTripNames, sameTripName, tripDisplayName } from '@/lib/trip-labels';
 import TripNameField from '@/components/TripNameField';
+import TripWhenField from '@/components/TripWhenField';
+import { formatTripWhen, formatTripWhenExact, sortByTripDate, toDayString, tripWhen } from '@/lib/trip-date';
 import { CheckIcon, CloseIcon, PencilIcon, TrashIcon, TripsIcon, UsersIcon } from '@/components/icons';
 import PersonToggle from '@/components/PersonToggle';
 import QuickAddGuest from '@/components/QuickAddGuest';
 import { guestSubtitle } from '@/lib/people';
 import { BTN, BTN_SIZE } from '@/lib/ui';
 import { cn } from '@/lib/utils';
+
+/**
+ * The tripDate to send for the When row: the chosen day ('' meaning today),
+ * or '' to clear it when that is simply the day the trip was logged.
+ */
+function tripDateFor(trip: Trip, when: string): string {
+  const day = when || toDayString(new Date());
+  return day === toDayString(new Date(trip.createdAt)) ? '' : day;
+}
 
 export default function HistoryPage() {
   const { user } = useAuth();
@@ -43,6 +54,19 @@ export default function HistoryPage() {
   const [quickGuestName, setQuickGuestName] = useState('');
   const [addingGuest, setAddingGuest] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  // The When row: '' = today, else "YYYY-MM-DD". Kept with its starting value
+  // so an untouched date isn't sent back.
+  const [whenDraft, setWhenDraft] = useState('');
+  const [whenStart, setWhenStart] = useState('');
+  // Cards whose date is showing the exact date and time.
+  const [exactDates, setExactDates] = useState<Set<string>>(new Set());
+  const toggleExact = (id: string) =>
+    setExactDates((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [nameFilter, setNameFilter] = useState<string | null>(null);
 
   // Guests linked to someone who is already a friend are shown once, as the friend.
@@ -65,9 +89,10 @@ export default function HistoryPage() {
     .filter((name) => (nameCounts.get(name.toLocaleLowerCase()) ?? 0) > 1 && (nameCounts.get(name.toLocaleLowerCase()) ?? 0) < trips.length)
     .slice(0, 8);
   const activeNameFilter = nameFilter && filterNames.some((name) => sameTripName(name, nameFilter)) ? nameFilter : null;
-  const visibleTrips = activeNameFilter
-    ? trips.filter((trip) => sameTripName(tripDisplayName(trip), activeNameFilter))
-    : trips;
+  // Newest trip first, by when it happened rather than when it was logged.
+  const visibleTrips = sortByTripDate(
+    activeNameFilter ? trips.filter((trip) => sameTripName(tripDisplayName(trip), activeNameFilter)) : trips
+  );
 
   const openEdit = (trip: Trip) => {
     setEditingTrip(trip);
@@ -76,6 +101,11 @@ export default function HistoryPage() {
     setFuelPriceDraft(String(trip.fuelPricePerLiter));
     // Older trips may only have tags: they become the name when saved.
     setNameDraft(tripDisplayName(trip));
+    const today = toDayString(new Date());
+    const startDay = trip.tripDate || toDayString(new Date(trip.createdAt));
+    const start = startDay === today ? '' : startDay;
+    setWhenDraft(start);
+    setWhenStart(start);
     setEditError(null);
     setIncludeCreatorDraft(trip.participants.some((participant) => participant.uid === currentUserId));
     setSelectedParticipantIds(
@@ -229,6 +259,7 @@ export default function HistoryPage() {
           fuelPricePerLiter: Number(fuelPriceDraft),
           participants,
           name: cleanTripName(nameDraft),
+          ...(whenDraft !== whenStart ? { tripDate: tripDateFor(editingTrip, whenDraft) } : {}),
         }),
       });
       const data = await res.json();
@@ -305,12 +336,6 @@ export default function HistoryPage() {
             const riders = trip.participants ?? [];
             const mine = trip.creatorUid === currentUserId;
             const myShare = riders.find((p) => p.uid === currentUserId)?.shareAmount;
-            // An equal split can differ by a paisa between riders (₹273.33 is
-            // ₹136.67 + ₹136.66), so treat shares within a paisa as equal and
-            // show the larger one.
-            const shareAmounts = riders.map((p) => p.shareAmount ?? 0);
-            const eachShare = shareAmounts.length > 0 ? Math.max(...shareAmounts) : 0;
-            const sharesEqual = shareAmounts.length > 0 && eachShare - Math.min(...shareAmounts) < 0.015;
             const firstNames = riders.map((p) => (p.uid === currentUserId ? 'You' : p.displayName.split(' ')[0]));
             return (
               <article key={trip.id} className="rounded-2xl border border-line bg-surface p-3.5 shadow-sm">
@@ -341,9 +366,17 @@ export default function HistoryPage() {
                       </span>
                     </div>
                     <div className="flex items-baseline justify-between gap-2 text-xs text-muted">
-                      <span className="truncate">
-                        {formatRelativeTime(trip.createdAt)}
-                        {tripDisplayName(trip) ? ` · ${trip.distanceKm} km` : ` · ${trip.avgMileageKmpl} km/L`}
+                      <span className="min-w-0 truncate">
+                        <button
+                          type="button"
+                          onClick={() => toggleExact(trip.id)}
+                          aria-label={exactDates.has(trip.id) ? 'Show how long ago' : `Show the exact date, ${formatTripWhenExact(tripWhen(trip))}`}
+                          className="underline decoration-line-strong decoration-dotted underline-offset-[3px] hover:text-ink"
+                        >
+                          {exactDates.has(trip.id) ? formatTripWhenExact(tripWhen(trip)) : formatTripWhen(tripWhen(trip))}
+                        </button>
+                        {/* The exact date is long: it takes the whole line while shown. */}
+                        {!exactDates.has(trip.id) && (tripDisplayName(trip) ? ` · ${trip.distanceKm} km` : ` · ${trip.avgMileageKmpl} km/L`)}
                       </span>
                       {myShare !== undefined && riders.length > 1 && (
                         <span className="shrink-0">
@@ -354,15 +387,13 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex min-h-9 items-center gap-2">
                   <p className="min-w-0 flex-1 truncate text-xs text-ink-soft">
                     <UsersIcon size={14} className="mr-1 -mt-0.5 text-muted" />
                     {firstNames.join(', ')}
-                    {riders.length > 1 && sharesEqual && (
-                      <span className="text-muted"> · {formatCurrency(eachShare)} each</span>
-                    )}
                   </p>
-                  {mine && (
+                  {/* Same corner on every card: Edit on your trips, who logged it on others'. */}
+                  {mine ? (
                     <button
                       type="button"
                       onClick={() => openEdit(trip)}
@@ -372,11 +403,10 @@ export default function HistoryPage() {
                       <PencilIcon size={14} />
                       Edit
                     </button>
+                  ) : (
+                    <span className="shrink-0 px-2 text-xs text-muted">by {trip.creatorName.split(' ')[0]}</span>
                   )}
                 </div>
-                {!mine && (
-                  <p className="mt-1 text-[11px] text-muted">Logged by {trip.creatorName}</p>
-                )}
 
               </article>
             );
@@ -444,7 +474,8 @@ export default function HistoryPage() {
               </p>
             )}
 
-            <TripNameField value={nameDraft} onChange={setNameDraft} names={myNames} className="mb-4 border-b border-line pb-4" />
+            <TripNameField value={nameDraft} onChange={setNameDraft} names={myNames} className="mb-4" />
+            <TripWhenField value={whenDraft} onChange={setWhenDraft} className="mb-4 border-b border-line pb-4" />
 
             <div className="space-y-3">
               <label className="block space-y-1.5">

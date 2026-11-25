@@ -3,7 +3,8 @@
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
-import { formatCurrency, formatRelativeTime } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
+import { formatTripWhen, sortByTripDate, tripWhen } from '@/lib/trip-date';
 import HomeScanner from '@/components/HomeScanner';
 import TripSheet, { type TripDraft } from '@/components/TripSheet';
 import type { Trip } from '@/types';
@@ -102,7 +103,7 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="space-y-2.5">
-            {trips.slice(0, 3).map((trip) => (
+            {sortByTripDate(trips).slice(0, 3).map((trip) => (
               <div
                 key={trip.id}
                 className="rounded-2xl bg-surface border border-line p-3.5 flex items-center justify-between gap-3 hover:border-line transition-colors"
@@ -119,7 +120,7 @@ export default function HomePage() {
                     </p>
                     <p className="text-xs text-muted truncate">
                       {tripDisplayName(trip) ? `${trip.distanceKm} km • ` : ''}
-                      {formatRelativeTime(trip.createdAt)} • {trip.fuelUsedLiters.toFixed(2)}L
+                      {formatTripWhen(tripWhen(trip))} • {trip.fuelUsedLiters.toFixed(2)}L
                     </p>
                   </div>
                 </div>
