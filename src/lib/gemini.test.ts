@@ -125,7 +125,7 @@ describe('extractDashboardReadings model fallback', () => {
     expect(calls).toEqual([DEFAULT_GEMINI_MODELS[0]]);
   });
 
-  it('asks Gemini 3 Flash for low thinking, and retries without it if refused', async () => {
+  it('asks Gemini 3 Flash for minimal thinking, and retries without it if refused', async () => {
     process.env.GEMINI_MODEL = 'gemini-3.8-flash';
     const configs: unknown[] = [];
     setGeminiGenerateForTests(async (_model, config) => {
@@ -134,7 +134,12 @@ describe('extractDashboardReadings model fallback', () => {
       return reading;
     });
     await extractDashboardReadings('aGk=');
-    expect(configs).toEqual([{ thinkingLevel: 'LOW' }, undefined]);
+    expect(configs).toEqual([{ thinkingLevel: 'MINIMAL' }, undefined]);
+
+    // Remembered: the next scan doesn't spend a request on the refused setting.
+    configs.length = 0;
+    await extractDashboardReadings('aGk=');
+    expect(configs).toEqual([undefined]);
   });
 
   it('moves to the next model on a quota error, and skips the limited one next time', async () => {

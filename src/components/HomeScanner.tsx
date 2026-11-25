@@ -56,6 +56,33 @@ function canvasToBlob(canvas: HTMLCanvasElement, quality = 0.88): Promise<Blob> 
   });
 }
 
+/** Longest side of a captured frame. Plenty for printed digits, and a much smaller upload. */
+const CAPTURE_MAX_SIDE = 1280;
+
+/**
+ * The part of the video frame visible in the card (the video fills the card
+ * like object-cover, so the camera sees more than the screen shows), scaled
+ * down to CAPTURE_MAX_SIDE. A smaller photo uploads faster and Gemini reads
+ * it faster, and the parts the user never saw can't confuse it.
+ */
+function frameCanvas(video: HTMLVideoElement): HTMLCanvasElement {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const cw = video.clientWidth || vw;
+  const ch = video.clientHeight || vh;
+  const cover = Math.max(cw / vw, ch / vh);
+  const sw = Math.min(vw, cw / cover);
+  const sh = Math.min(vh, ch / cover);
+  const sx = (vw - sw) / 2;
+  const sy = (vh - sh) / 2;
+  const scale = Math.min(1, CAPTURE_MAX_SIDE / Math.max(sw, sh));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sw * scale);
+  canvas.height = Math.round(sh * scale);
+  canvas.getContext('2d')?.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
 /**
  * The live camera card on Home. The centre button of the bottom bar is its
  * shutter: a tap takes the photo and sends it to be read. The camera turns
@@ -145,7 +172,7 @@ export default function HomeScanner({
     [grabPoster, onResult, setPhase, stopCamera]
   );
 
-  /** The shutter: take a full-resolution frame and send it for reading. */
+  /** The shutter: take the frame as seen on screen and send it for reading. */
   const captureAndRead = useCallback(async () => {
     const video = videoRef.current;
     if (phaseRef.current !== 'live' || !video || video.readyState < 2 || !video.videoWidth) return;
@@ -153,13 +180,10 @@ export default function HomeScanner({
     setPhase('reading');
     setMessage(null);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    const canvas = frameCanvas(video);
     let blob: Blob;
     try {
-      blob = await canvasToBlob(canvas);
+      blob = await canvasToBlob(canvas, 0.85);
     } catch {
       setPhase('live');
       return;
